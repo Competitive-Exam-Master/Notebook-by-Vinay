@@ -141,6 +141,7 @@
             display: flex;
             flex-direction: column;
             padding-top: 0; /* Will be set by JS */
+            padding-bottom: 0; /* Will be set by JS for debug log */
         }
 
         h1 {
@@ -320,6 +321,52 @@
         .math-edit-buttons button#math-cancel-btn:hover {
             background-color: #c82333;
         }
+
+        /* Debug Log Styles */
+        #debug-log {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            max-height: 40%; /* Limit height to 40% of viewport */
+            background-color: #222;
+            color: #eee;
+            padding: 10px;
+            box-sizing: border-box;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-y: auto; /* Make it scrollable */
+            z-index: 2000; /* Ensure it's on top */
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.5);
+            border-top: 1px solid #444;
+            display: none; /* Hidden by default, show when a log is added */
+        }
+        #debug-log h3 {
+            margin-top: 0;
+            margin-bottom: 5px;
+            color: #007bff;
+            font-size: 1.1em;
+        }
+        #debug-log pre {
+            white-space: pre-wrap; /* Preserve whitespace and wrap long lines */
+            word-wrap: break-word;
+            margin: 0;
+            padding: 5px 0;
+            max-height: calc(100% - 30px); /* Adjust based on h3 and button height */
+            overflow-y: auto;
+        }
+        #debug-log button {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+        #debug-log button:hover {
+            background-color: #c82333;
+        }
     </style>
 
     <script>
@@ -436,7 +483,33 @@
         </div>
     </div>
 
+    <div id="debug-log">
+        <h3>Debug Log</h3>
+        <pre id="log-content"></pre>
+        <button onclick="document.getElementById('log-content').innerHTML = '';">Clear Log</button>
+    </div>
+
     <script>
+        // Custom logging function to show messages on the page
+        function logToPage(message, type = 'info') {
+            const logContent = document.getElementById('log-content');
+            const debugLogBox = document.getElementById('debug-log');
+            if (logContent && debugLogBox) {
+                const timestamp = new Date().toLocaleTimeString();
+                let color = 'white';
+                if (type === 'error') {
+                    color = 'red';
+                } else if (type === 'warn') {
+                    color = 'yellow';
+                } else if (type === 'success') {
+                    color = 'lightgreen';
+                }
+                logContent.innerHTML += `<span style="color:${color};">[${timestamp}] ${message}</span><br>`;
+                logContent.scrollTop = logContent.scrollHeight; // Scroll to bottom
+                debugLogBox.style.display = 'block'; // Show the log box
+            }
+        }
+
         // Use a DOMContentLoaded listener to ensure the DOM is ready,
         // and then wait for MathJax to be ready.
         document.addEventListener('DOMContentLoaded', function() {
@@ -515,6 +588,7 @@
                 editor.setAttribute('contenteditable', 'false'); // Disable editor when overlay is active
                 closeAllSubmenus();
                 adjustLayout();
+                logToPage("Math editor shown for element: " + mathCode);
             }
 
             function finishMathEdit() {
@@ -524,6 +598,7 @@
                     const mathScriptTag = currentMathEditContainer.querySelector('script[type^="math/tex"]');
                     if (mathScriptTag) {
                         mathScriptTag.textContent = newRawCode;
+                        logToPage("Math script tag updated with: " + newRawCode);
                     }
 
                     // Re-show the MathJax rendered output and remove highlight
@@ -535,16 +610,20 @@
                     
                     // Trigger MathJax to re-render the specific math element
                     // MathJax will now read the updated script tag content.
-                    MathJax.typesetPromise([currentMathEditContainer]).then(() => {
-                        console.log("MathJax re-typeset after edit.");
-                        // Move caret after the edited math element
-                        const selection = window.getSelection();
-                        const range = document.createRange();
-                        const emptyTextNode = document.createTextNode('\u200B'); // Zero-width space
-                        currentMathEditContainer.parentNode.insertBefore(emptyTextNode, currentMathEditContainer.nextSibling);
-                        selection.collapse(emptyTextNode, 1);
-                        editor.focus();
-                    }).catch(err => console.error("MathJax typesetting error after edit:", err));
+                    if (typeof MathJax !== 'undefined' && typeof MathJax.typesetPromise !== 'undefined') {
+                        MathJax.typesetPromise([currentMathEditContainer]).then(() => {
+                            logToPage("MathJax re-typeset after edit.");
+                            // Move caret after the edited math element
+                            const selection = window.getSelection();
+                            const range = document.createRange();
+                            const emptyTextNode = document.createTextNode('\u200B'); // Zero-width space
+                            currentMathEditContainer.parentNode.insertBefore(emptyTextNode, currentMathEditContainer.nextSibling);
+                            selection.collapse(emptyTextNode, 1);
+                            editor.focus();
+                        }).catch(err => logToPage("MathJax typesetting error after edit: " + err.message, 'error'));
+                    } else {
+                        logToPage("MathJax not available for re-typesetting after edit.", 'error');
+                    }
                 }
                 hideMathEditor();
             }
@@ -557,6 +636,7 @@
                         renderedMath.style.display = ''; // Show rendered MathJax
                     }
                     currentMathEditContainer.classList.remove('math-selected'); // Remove selection highlight
+                    logToPage("Math edit cancelled.");
                 }
                 hideMathEditor();
             }
@@ -577,6 +657,7 @@
                 });
                 activeSubmenu = null;
                 adjustLayout();
+                logToPage("All submenus closed.");
             }
 
             function toggleSubmenu(submenuElement) {
@@ -590,6 +671,7 @@
                 activeSubmenu = submenuElement.classList.contains('visible') ? submenuElement : null;
 
                 adjustLayout();
+                logToPage("Submenu toggled: " + submenuElement.id + ", now visible: " + (activeSubmenu !== null));
             }
 
             textMenuBtn.addEventListener('click', (event) => {
@@ -609,6 +691,7 @@
 
             mathInlineBtn.addEventListener('click', (event) => {
                 event.preventDefault();
+                logToPage("Insert inline math button clicked.");
                 insertMathCode('inline');
                 closeAllSubmenus();
                 adjustLayout();
@@ -616,6 +699,7 @@
 
             mathBlockBtn.addEventListener('click', (event) => {
                 event.preventDefault();
+                logToPage("Insert block math button clicked.");
                 insertMathCode('block');
                 closeAllSubmenus();
                 adjustLayout();
@@ -625,6 +709,7 @@
 
             function formatDoc(command, value = null) {
                 editor.focus();
+                logToPage("Executing command: " + command + (value ? " with value: " + value : ""));
 
                 if (command === 'createLink') {
                     const url = prompt("Enter the URL:");
@@ -651,10 +736,14 @@
                     const button = event.target.closest('button');
                     if (button) {
                         if (button.id === 'insert-image-btn') {
+                            logToPage("Insert image button clicked.");
                             imageUploadInput.click();
                         } else {
                             const command = button.dataset.command;
-                            formatDoc(command);
+                            if (command) {
+                                logToPage("Submenu button clicked, command: " + command);
+                                formatDoc(command);
+                            }
                         }
                     }
                 });
@@ -665,6 +754,7 @@
             imageUploadInput.addEventListener('change', (event) => {
                 const file = event.target.files[0];
                 if (file) {
+                    logToPage("Image file selected: " + file.name);
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         editor.focus();
@@ -682,8 +772,10 @@
                             selection.removeAllRanges();
                             selection.addRange(range);
                             setTimeout(() => updateToolbarState(newImage), 100);
+                            logToPage("Image inserted and selected.");
                         } else {
                             setTimeout(() => updateToolbarState(null), 100);
+                            logToPage("Image inserted, but not immediately selected (might be an issue).");
                         }
                     };
                     reader.readAsDataURL(file);
@@ -736,12 +828,14 @@
                 img.style.float = 'none';
                 img.style.margin = '';
                 img.style.display = '';
+                logToPage("Removed image floats and margins.");
             }
 
             function alignSelectedImage(alignment) {
                 const img = getSelectedImage();
                 if (!img) {
                     alert("Please select an image in the editor first by tapping on it.");
+                    logToPage("Attempted image alignment without selection.", 'warn');
                     return;
                 }
 
@@ -757,6 +851,7 @@
                     img.style.display = 'block';
                     img.style.margin = '5px auto';
                 }
+                logToPage("Image aligned: " + alignment);
                 setTimeout(() => updateToolbarState(img), 50);
             }
 
@@ -764,6 +859,7 @@
                 const img = getSelectedImage();
                 if (!img) {
                     alert("Please select an image in the editor first by tapping on it.");
+                    logToPage("Attempted text wrap without image selection.", 'warn');
                     return;
                 }
 
@@ -781,6 +877,7 @@
                     img.style.display = 'block';
                     img.style.margin = '5px auto';
                 }
+                logToPage("Text wrap applied: " + wrapType);
                 setTimeout(() => updateToolbarState(img), 50);
             }
 
@@ -788,6 +885,7 @@
                 const img = getSelectedImage();
                 if (!img) {
                     alert("Please select an image in the editor first by tapping on it.");
+                    logToPage("Attempted image resize without selection.", 'warn');
                     return;
                 }
 
@@ -799,6 +897,9 @@
                     const parts = newDimensions.split(',').map(s => s.trim());
                     if (parts[0]) img.style.width = parts[0];
                     if (parts[1]) img.style.height = parts[1];
+                    logToPage("Image resized to: " + newDimensions);
+                } else {
+                    logToPage("Image resize cancelled or no dimensions entered.", 'info');
                 }
                 setTimeout(() => updateToolbarState(img), 50);
             }
@@ -811,11 +912,13 @@
 
                 if (selectedImage) {
                     imageOptionsMenuBtn.style.display = 'block';
+                    // logToPage("Image selected, image options button visible."); // Too chatty
                 } else {
                     imageOptionsMenuBtn.style.display = 'none';
                     if (activeSubmenu === imageOptionsSubmenu) {
                         closeAllSubmenus();
                     }
+                    // logToPage("No image selected, image options button hidden."); // Too chatty
                 }
 
                 allSubmenus.forEach(submenu => {
@@ -883,7 +986,7 @@
                                     }
                                 }
                             } catch (e) {
-                                // console.warn(`Error querying command state for ${command}:`, e);
+                                // logToPage(`Error querying command state for ${command}: ${e.message}`, 'warn'); // Too chatty
                             }
                         });
                     }
@@ -895,6 +998,7 @@
             function adjustLayout() {
                 const currentMainToolbarHeight = toolbar.offsetHeight;
                 const currentSubmenuHeight = activeSubmenu ? activeSubmenu.offsetHeight : 0;
+                const debugLogHeight = document.getElementById('debug-log').offsetHeight; // Get height of debug log
                 const totalToolbarHeight = currentMainToolbarHeight + currentSubmenuHeight;
 
                 allSubmenus.forEach(submenu => {
@@ -902,12 +1006,16 @@
                 });
 
                 mainContentWrapper.style.paddingTop = `${totalToolbarHeight}px`;
+                mainContentWrapper.style.paddingBottom = `${debugLogHeight + 10}px`; // Add some extra space for debug log
+
 
                 if (window.visualViewport) {
                     mainContentWrapper.style.height = `${window.visualViewport.height}px`;
                 } else {
                     mainContentWrapper.style.height = `100vh`;
                 }
+                logToPage(`Layout adjusted: Toolbar ${totalToolbarHeight}px, Debug Log ${debugLogHeight}px.`);
+
 
                 // Added a slight delay for caret positioning to allow rendering to settle
                 setTimeout(() => {
@@ -930,8 +1038,10 @@
 
                             if (caretRelativeBottom > editor.clientHeight + scrollOffset) {
                                 editor.scrollTop = caretRelativeBottom - editor.clientHeight + 10;
+                                logToPage("Caret scrolled down.");
                             } else if (caretRelativeTop < scrollOffset) {
                                 editor.scrollTop = caretRelativeTop - 10;
+                                logToPage("Caret scrolled up.");
                             }
                         }
                     }
@@ -944,6 +1054,7 @@
                 editor.focus();
                 const selection = window.getSelection();
                 const range = selection.getRangeAt(0);
+                logToPage("Attempting to insert " + type + " math code.");
 
                 const wrapperElement = document.createElement(type === 'block' ? 'div' : 'span');
                 wrapperElement.className = 'math-tex'; // Custom class for our math elements
@@ -960,6 +1071,7 @@
                 wrapperElement.appendChild(mathScriptTag); // The script tag holds the actual LaTeX
 
                 range.insertNode(wrapperElement);
+                logToPage("Math wrapper and script tag inserted into editor.");
 
                 // Add an empty text node or a zero-width space after the math container
                 // to allow caret placement and continued typing.
@@ -969,12 +1081,12 @@
                 // Ensure MathJax renders the newly inserted element by telling it to process 'wrapperElement'
                 if (typeof MathJax !== 'undefined' && typeof MathJax.typesetPromise !== 'undefined') {
                     MathJax.typesetPromise([wrapperElement]).then(() => {
-                        console.log("MathJax typeset new element.");
+                        logToPage("MathJax typeset new element successfully.");
                         selection.collapse(emptyTextNode, 1); // Move caret after the inserted element
                         editor.focus();
-                    }).catch(err => console.error("MathJax typesetting error on insert:", err));
+                    }).catch(err => logToPage("MathJax typesetting error on insert: " + err.message, 'error'));
                 } else {
-                    console.error("MathJax is not available to typeset the new element.");
+                    logToPage("MathJax is not available to typeset the new element after insertion.", 'error');
                 }
             }
 
@@ -986,6 +1098,7 @@
 
                 if (customMathWrapper) {
                     event.preventDefault(); // Prevent default contenteditable behavior
+                    logToPage("Clicked on math element.");
 
                     // Remove any previous selection highlights
                     document.querySelectorAll('.math-tex.math-selected').forEach(el => el.classList.remove('math-selected'));
@@ -994,7 +1107,7 @@
                     // Get the raw LaTeX code from the script tag within our custom wrapper
                     const mathScriptTag = customMathWrapper.querySelector('script[type^="math/tex"]');
                     if (!mathScriptTag) {
-                        console.error("Could not find script tag within .math-tex element.");
+                        logToPage("Could not find script tag within .math-tex element on click.", 'error');
                         return;
                     }
                     const rawMathCode = mathScriptTag.textContent;
@@ -1005,6 +1118,7 @@
             // Handle touch events for selecting images and math
             editor.addEventListener('touchend', (event) => {
                 const target = event.target;
+                logToPage("Touchend event detected.");
 
                 // Reset selection highlight on all math elements
                 document.querySelectorAll('.math-tex.math-selected').forEach(el => el.classList.remove('math-selected'));
@@ -1013,6 +1127,7 @@
                 const customMathWrapper = target.closest('.math-tex');
                 if (customMathWrapper) {
                     event.preventDefault(); // Prevent default browser selection
+                    logToPage("Touchend on math element.");
                     
                     // Programmatically set selection on the customMathWrapper for consistency
                     const selection = window.getSelection();
@@ -1039,6 +1154,7 @@
                 }
 
                 if (imageElement && imageElement.tagName === 'IMG') {
+                    logToPage("Touchend on image element.");
                     const selection = window.getSelection();
                     const range = document.createRange();
                     range.selectNode(imageElement);
@@ -1050,6 +1166,7 @@
                     event.preventDefault(); // Prevent default image drag/selection behavior
                 } else {
                     // If neither math nor image, update toolbar to reflect no special selection
+                    logToPage("Touchend not on math or image, updating toolbar state.");
                     setTimeout(() => updateToolbarState(null), 50);
                 }
             });
@@ -1057,14 +1174,17 @@
 
             if (window.visualViewport) {
                 window.visualViewport.addEventListener('resize', adjustLayout);
+                logToPage("VisualViewport resize listener added.");
             } else {
                 window.addEventListener('resize', adjustLayout);
+                logToPage("Window resize listener added.");
             }
 
             editor.addEventListener('mouseup', () => {
                 // Remove math selection highlight on general mouseup
                 document.querySelectorAll('.math-tex.math-selected').forEach(el => el.classList.remove('math-selected'));
                 updateToolbarState(null);
+                logToPage("Mouseup in editor, selection reset.");
             });
             editor.addEventListener('keyup', (e) => {
                 // If the user types after selecting math, remove the selection highlight
@@ -1072,6 +1192,7 @@
                     document.querySelectorAll('.math-tex.math-selected').forEach(el => el.classList.remove('math-selected'));
                 }
                 updateToolbarState(null);
+                // logToPage("Keyup in editor, selection reset."); // Too chatty
             });
 
             // Using mutation observer to detect changes and typeset new math
@@ -1084,6 +1205,7 @@
                             if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains('math-tex')) {
                                 // If a new math-tex element is added, typeset it
                                 typesetElements.add(node);
+                                logToPage("MutationObserver detected new .math-tex element added.");
                             }
                         }
                     }
@@ -1095,9 +1217,10 @@
                     clearTimeout(editor.mathTypesetTimer);
                     editor.mathTypesetTimer = setTimeout(() => {
                         if (typeof MathJax !== 'undefined' && typeof MathJax.typesetPromise !== 'undefined') {
-                            MathJax.typesetPromise([...typesetElements]).catch(err => console.error("MathJax typeset error on new element:", err));
+                            logToPage("Debounced MathJax typeset triggered for new elements.");
+                            MathJax.typesetPromise([...typesetElements]).catch(err => logToPage("MathJax typeset error on new element from observer: " + err.message, 'error'));
                         } else {
-                            console.warn("MathJax not ready for typesetting elements from MutationObserver.");
+                            logToPage("MathJax not ready for typesetting elements from MutationObserver.", 'warn');
                         }
                     }, 300); // Adjust debounce delay as needed
                 }
@@ -1120,10 +1243,12 @@
                 // Clicking outside toolbar, submenus, editor, and math overlay should close submenus
                 if (!isInsideToolbar && !isInsideSubmenu && !isInsideEditor && !isInsideMathOverlay) {
                     closeAllSubmenus();
+                    logToPage("Clicked outside, submenus closed.");
                 }
                 // Clicking inside editor but not on a submenu should close submenus
                 if (isInsideEditor && !isInsideSubmenu && activeSubmenu) {
                     closeAllSubmenus();
+                    logToPage("Clicked in editor, submenus closed.");
                 }
             });
 
@@ -1132,22 +1257,25 @@
             editor.focus();
             adjustLayout();
             updateToolbarState();
+            logToPage("Initial editor setup complete.");
+
 
             // Wait for MathJax to be ready before performing initial typesetting
             if (window.MathJax) {
+                logToPage("window.MathJax object exists. Attempting startup promise.", 'info');
                 // MathJax 3 uses a promise-based startup
                 MathJax.startup.promise.then(() => {
-                    console.log("MathJax is ready.");
+                    logToPage("MathJax is ready.", 'success');
                     // Initial MathJax typeset for any math present on page load
                     // This will find all <script type="math/tex"> tags in the #editor and render them.
                     MathJax.typesetPromise([editor]).then(() => {
-                        console.log("Initial MathJax typeset complete on editor.");
-                    }).catch(err => console.error("MathJax initial typeset error:", err));
+                        logToPage("Initial MathJax typeset complete on editor.", 'success');
+                    }).catch(err => logToPage("MathJax initial typeset error: " + err.message, 'error'));
                 }).catch(err => {
-                    console.error("MathJax startup promise failed:", err);
+                    logToPage("MathJax startup promise failed: " + err.message, 'error');
                 });
             } else {
-                console.error("MathJax object not found. Check CDN script.");
+                logToPage("MathJax object NOT found. CDN script might not have loaded or initialized.", 'error');
             }
 
         }); // End of DOMContentLoaded function
