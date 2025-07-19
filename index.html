@@ -356,16 +356,24 @@
             overflow-y: auto;
         }
         #debug-log button {
-            background-color: #dc3545;
+            background-color: #dc3545; /* Default to red for Clear Log */
             color: white;
             border: none;
             padding: 5px 10px;
             border-radius: 3px;
             cursor: pointer;
             margin-top: 5px;
+            margin-right: 5px; /* Space between buttons */
         }
         #debug-log button:hover {
             background-color: #c82333;
+        }
+        /* Specific style for the new CDN check button */
+        #debug-log #check-cdn-btn {
+            background-color: #28a745; /* Green for check CDN */
+        }
+        #debug-log #check-cdn-btn:hover {
+            background-color: #218838;
         }
     </style>
 
@@ -487,7 +495,7 @@
         <h3>Debug Log</h3>
         <pre id="log-content"></pre>
         <button onclick="document.getElementById('log-content').innerHTML = '';">Clear Log</button>
-    </div>
+        <button id="check-cdn-btn">Check MathJax CDN</button> </div>
 
     <script>
         // Custom logging function to show messages on the page
@@ -534,6 +542,9 @@
             // Image upload elements
             const insertImageBtn = document.getElementById('insert-image-btn');
             const imageUploadInput = document.getElementById('image-upload-input');
+
+            // CDN check button
+            const checkCdnBtn = document.getElementById('check-cdn-btn');
 
             let activeSubmenu = null;
             let currentMathEditContainer = null; // Stores the custom .math-tex element being edited
@@ -1276,6 +1287,31 @@
                 });
             } else {
                 logToPage("MathJax object NOT found. CDN script might not have loaded or initialized.", 'error');
+            }
+
+            // --- New CDN Check Functionality ---
+            checkCdnBtn.addEventListener('click', checkMathJaxCDNReachability);
+
+            async function checkMathJaxCDNReachability() {
+                logToPage("Attempting to reach MathJax CDN...", 'info');
+                const cdnUrl = 'https://cdn.jsdelivr.net/npm/mathjax@3/package.json'; // A small, accessible file on the CDN
+
+                try {
+                    // Use a HEAD request as it's lighter and just checks if the resource exists
+                    const response = await fetch(cdnUrl, { method: 'HEAD', mode: 'cors' });
+
+                    if (response.ok) { // response.ok is true for 2xx status codes
+                        logToPage(`CDN reachable! Status: ${response.status} ${response.statusText}`, 'success');
+                    } else {
+                        logToPage(`CDN responded with error: ${response.status} ${response.statusText}. This indicates a server-side or resource issue.`, 'error');
+                    }
+                } catch (error) {
+                    // Catch network errors (e.g., no internet, DNS failure, CORS preflight block)
+                    logToPage(`CDN unreachable: ${error.message}. This is likely a network, DNS, or CORS issue.`, 'error');
+                    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+                        logToPage("Possible causes: network offline, browser/ISP blocking, or DNS resolution failure.", 'error');
+                    }
+                }
             }
 
         }); // End of DOMContentLoaded function
