@@ -1272,22 +1272,24 @@
 
 
             // Wait for MathJax to be ready before performing initial typesetting
-            if (window.MathJax) {
-                logToPage("window.MathJax object exists. Attempting startup promise.", 'info');
-                // MathJax 3 uses a promise-based startup
-                MathJax.startup.promise.then(() => {
-                    logToPage("MathJax is ready.", 'success');
-                    // Initial MathJax typeset for any math present on page load
-                    // This will find all <script type="math/tex"> tags in the #editor and render them.
-                    MathJax.typesetPromise([editor]).then(() => {
-                        logToPage("Initial MathJax typeset complete on editor.", 'success');
-                    }).catch(err => logToPage("MathJax initial typeset error: " + err.message, 'error'));
-                }).catch(err => {
-                    logToPage("MathJax startup promise failed: " + err.message, 'error');
-                });
-            } else {
-                logToPage("MathJax object NOT found. CDN script might not have loaded or initialized.", 'error');
-            }
+            setTimeout(() => { // Added a setTimeout here
+                if (window.MathJax) {
+                    logToPage("window.MathJax object exists. Attempting startup promise.", 'info');
+                    // MathJax 3 uses a promise-based startup
+                    MathJax.startup.promise.then(() => {
+                        logToPage("MathJax is ready.", 'success');
+                        // Initial MathJax typeset for any math present on page load
+                        // This will find all <script type="math/tex"> tags in the #editor and render them.
+                        MathJax.typesetPromise([editor]).then(() => {
+                            logToPage("Initial MathJax typeset complete on editor.", 'success');
+                        }).catch(err => logToPage("MathJax initial typeset error: " + err.message, 'error'));
+                    }).catch(err => {
+                        logToPage("MathJax startup promise failed: " + err.message, 'error');
+                    });
+                } else {
+                    logToPage("MathJax object NOT found. CDN script might not have loaded or initialized after delay.", 'error');
+                }
+            }, 1000); // 1-second delay
 
             // --- New CDN Check Functionality ---
             checkCdnBtn.addEventListener('click', checkMathJaxCDNReachability);
