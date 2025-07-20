@@ -4,16 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Markdown + MathJax Editor</title>
-
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script>
-    window.MathJax = {
-      tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] },
-      svg: { fontCache: 'global' }
-    };
-  </script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-
   <style>
     html, body {
       margin: 0; padding: 0;
@@ -32,8 +24,7 @@
       padding: 16px;
       font-size: 16px;
       font-family: monospace;
-      border: none;
-      outline: none;
+      border: none; outline: none;
       resize: none;
       background: #eef;
       overflow-y: auto;
@@ -44,15 +35,13 @@
       position: relative; flex-shrink: 0;
     }
     .drag-btn {
-      position: absolute;
-      top: -8px; left: 50%;
+      position: absolute; top: -8px; left: 50%;
       transform: translateX(-50%);
       width: 40px; height: 40px;
       background: #333; border-radius: 50%;
       border: 2px solid #fff;
       box-shadow: 0 0 5px rgba(0,0,0,0.3);
-      cursor: row-resize;
-      touch-action: none;
+      cursor: row-resize; touch-action: none;
       z-index: 10;
     }
     .bottom-half {
@@ -64,6 +53,9 @@
     }
     #output br {
       display: block; margin-top: 0.6em;
+    }
+    #output .spacer {
+      height: 1.6em; display: block;
     }
     .toolbar {
       padding: 12px;
@@ -108,8 +100,16 @@
 
     input.addEventListener("input", () => updatePreview(input.value));
 
+    function preprocessMarkdown(md) {
+      return md.replace(/\n{3,}/g, match => {
+        const count = match.length;
+        return '\n\n' + '<div class="spacer"></div>\n'.repeat(count - 2);
+      });
+    }
+
     function updatePreview(text) {
-      const html = marked.parse(text, { breaks: true });
+      const processed = preprocessMarkdown(text);
+      const html = marked.parse(processed, { breaks: true });
       output.innerHTML = html;
       MathJax.typesetClear();
       MathJax.typesetPromise([output]);
@@ -126,10 +126,15 @@
 This line is visible.
 This one is right below.
 
-Now some extra space:
+
+Now we insert some space:
 
 
-Now we're back.
+Even more spacing here:
+
+
+
+Back again.
 
 Inline math: $x^2 + y^2 = z^2$
 
@@ -137,8 +142,7 @@ Block math:
 
 $$
 \\sum_{n=1}^\\infty \\frac{1}{n^2} = \\frac{\\pi^2}{6}
-$$
-`;
+$$`;
       updatePreview(input.value);
     };
   </script>
