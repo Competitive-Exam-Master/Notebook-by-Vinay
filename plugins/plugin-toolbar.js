@@ -57,6 +57,8 @@ registerPlugin({
       if (draft) {
         input.value = draft;
         updatePreview(draft);
+        input.focus();
+        setTimeout(() => input.setSelectionRange(input.value.length, input.value.length), 0);
       } else {
         alert("No draft found.");
       }
@@ -70,27 +72,17 @@ registerPlugin({
       a.click();
     });
 
-    // 🔧 Utilities (with keyboard fix)
+    // 🔧 Utilities with keyboard-safe focus
     function wrap(before, after) {
-      const s = input.selectionStart, e = input.selectionEnd;
+      const s = input.selectionStart;
+      const e = input.selectionEnd;
       const selected = input.value.slice(s, e);
       const newText = before + selected + after;
-
       input.setRangeText(newText, s, e, 'end');
       updatePreview(input.value);
       input.focus();
-      setTimeout(() => input.setSelectionRange(s + before.length + selected.length + after.length, s + before.length + selected.length + after.length), 0);
-    }
-
-    function linePrefix(prefix) {
-      const lines = input.value.split("\n");
-      const pos = input.selectionStart;
-      const idx = input.value.slice(0, pos).split("\n").length - 1;
-      lines[idx] = prefix + lines[idx];
-      input.value = lines.join("\n");
-      updatePreview(input.value);
-      input.focus();
-      setTimeout(() => input.setSelectionRange(pos + prefix.length, pos + prefix.length), 0);
+      const cursor = s + before.length + selected.length + after.length;
+      setTimeout(() => input.setSelectionRange(cursor, cursor), 0);
     }
 
     function insert(content) {
@@ -98,7 +90,21 @@ registerPlugin({
       input.setRangeText(content, pos, pos, 'end');
       updatePreview(input.value);
       input.focus();
-      setTimeout(() => input.setSelectionRange(pos + content.length, pos + content.length), 0);
+      const cursor = pos + content.length;
+      setTimeout(() => input.setSelectionRange(cursor, cursor), 0);
+    }
+
+    function linePrefix(prefix) {
+      const lines = input.value.split("\n");
+      const pos = input.selectionStart;
+      const lineIndex = input.value.slice(0, pos).split("\n").length - 1;
+      const lineStart = lines.slice(0, lineIndex).join("\n").length + (lineIndex > 0 ? 1 : 0);
+      lines[lineIndex] = prefix + lines[lineIndex];
+      input.value = lines.join("\n");
+      updatePreview(input.value);
+      input.focus();
+      const newPos = lineStart + prefix.length;
+      setTimeout(() => input.setSelectionRange(newPos, newPos), 0);
     }
   }
 });
