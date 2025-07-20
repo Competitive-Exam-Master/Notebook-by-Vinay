@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width" />
   <title>Markdown + MathJax Editor</title>
 
-  <!-- Markdown + Math Libraries -->
+  <!-- Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script>
     window.MathJax = {
@@ -121,7 +121,6 @@
     <div class="bottom-half"><div id="output"></div></div>
   </div>
 
-  <!-- Script -->
   <script type="module">
     import { initPlugins } from './plugin-loader.js';
 
@@ -137,13 +136,13 @@
     }
 
     function updatePreview(text) {
-      let html = marked.parse(preprocess(text), { breaks: true });
+      const stripped = text.replace(/<!--\s*data:image[^>]*-->/g, '');
+      let html = marked.parse(preprocess(stripped), { breaks: true });
 
-      // Replace image labels with real base64 src from imageMap
       html = html.replace(/\[📷 Image (\d+)\]/g, (_, num) => {
-        const label = `[📷 Image ${num}]`;
-        const src = window.imageMap?.[label];
-        return src ? `<img src="${src}" alt="Image ${num}" />` : label;
+        const key = `[📷 Image ${num}]`;
+        const src = window.imageMap?.[key];
+        return src ? `<img src="${src}" alt="Image ${num}" />` : key;
       });
 
       output.innerHTML = html;
@@ -154,13 +153,13 @@
     input.addEventListener("input", () => updatePreview(input.value));
 
     window.onload = () => {
-      window.imageMap = {}; // init empty
-      input.value = `# 🖼️ Toolbar Image Test
+      window.imageMap = {};
+      input.value = `# 🖼️ Image Workflow Demo
 
-Try inserting an image from the Media menu ➕  
-• It shows only label like \`[📷 Image 1]\` in code  
-• Renders full image in preview  
-• Import stays clean ✅
+Tap Insert Image ➕  
+• Code shows \`[📷 Image 1]\`, not base64  
+• Preview shows actual image  
+• Import stays clean ✨
 
 $e^{i\\pi} + 1 = 0$
 
