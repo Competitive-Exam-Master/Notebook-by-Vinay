@@ -45,17 +45,20 @@ registerPlugin({
         {
           label: "🖼️ Insert Image",
           fn: () => {
-            const inputEl = document.createElement("input");
-            inputEl.type = "file";
-            inputEl.accept = "image/*";
-            inputEl.style.display = "none";
-            inputEl.onchange = (e) => {
+            const fileInput = document.createElement("input");
+            fileInput.type = "file";
+            fileInput.accept = "image/*";
+            fileInput.style.display = "none";
+            fileInput.onchange = (e) => {
               const file = e.target.files[0];
               if (file) {
                 const reader = new FileReader();
                 reader.onload = function(evt) {
-                  const imgData = evt.target.result;
-                  const markdown = `[📷 Inserted Image]\n<!-- ${imgData} -->`;
+                  if (!window.imageMap) window.imageMap = {};
+                  const imgCount = Object.keys(window.imageMap).length + 1;
+                  const label = `[📷 Image ${imgCount}]`;
+                  window.imageMap[label] = evt.target.result;
+                  const markdown = `${label}\n<!-- ${evt.target.result} -->`;
                   const pos = input.selectionStart;
                   input.setRangeText(markdown, pos, pos, 'end');
                   updatePreview(input.value);
@@ -65,8 +68,8 @@ registerPlugin({
                 reader.readAsDataURL(file);
               }
             };
-            document.body.appendChild(inputEl);
-            inputEl.click();
+            document.body.appendChild(fileInput);
+            fileInput.click();
           }
         },
         { label: "Wrap Left", fn: () => wrapNearestImage("left") },
@@ -78,10 +81,9 @@ registerPlugin({
         {
           label: "❔ Quick Tips",
           fn: () => alert(`Editor Tips:
-• Use ⬅️ Back to return
-• Scroll toolbar horizontally
-• Insert images from mobile gallery
-• Drag divider to resize editor`)
+• Insert image → shows label, hides base64
+• Load will auto-clean base64 into labels
+• Preview will restore full images from memory`)
         },
         { label: "Back ◀️", submenu: "main" }
       ]
@@ -186,14 +188,33 @@ registerPlugin({
 
     function load() {
       const draft = localStorage.getItem("markdownDraft");
-      if (draft) {
-        input.value = draft;
-        updatePreview(draft);
-        input.focus();
-        setTimeout(() => input.setSelectionRange(input.value.length, input.value.length), 0);
-      } else {
-        alert("No draft found.");
+      if (!draft) return alert("No draft found.");
+
+      const lines = draft.split("\n");
+      window.imageMap = {}; // Reset
+      let counter = 1;
+
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].startsWith("<!--") && lines[i].includes("data:image")) {
+          const base64 = lines[i].slice(4, -3).trim();
+          const label = `[📷 Image ${counter}]`;
+          window.imageMap[label] = base64;
+
+          if (i > 0 && lines[i - 1].startsWith("[📷")) {
+            lines[i] = ""; // Remove base64 line
+          } else {
+            lines[i] = label;
+          }
+
+          counter++;
+        }
       }
+
+      const cleaned = lines.filter(line => line !== "").join("\n");
+      input.value = cleaned;
+      updatePreview(cleaned);
+      input.focus();
+      setTimeout(() => input.setSelectionRange(cleaned.length, cleaned.length), 0);
     }
 
     function exportMD() {
