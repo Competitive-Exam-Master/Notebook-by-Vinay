@@ -1,1 +1,30 @@
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    body {
+      margin: 0; padding: 8px;
+      background: #ddd;
+      font-family: sans-serif;
+    }
+    .toolbar {
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    button {
+      font-size: 14px; padding: 6px 12px;
+      border-radius: 4px; border: none;
+      background: #444; color: white;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button onclick="parent.openPreview()">🔗 Preview</button>
+    <button onclick="parent.saveDraft()">💾 Save</button>
+    <button onclick="parent.loadDraft()">📂 Load</button>
+    <button onclick="parent.exportDraft()">📄 Export</button>
+  </div>
+</body>
+</html>
