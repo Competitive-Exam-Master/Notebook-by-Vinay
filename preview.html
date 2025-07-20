@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Preview</title>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -13,7 +13,7 @@
     };
   </script>
   <style>
-    html, body { margin: 0; padding: 20px; font-family: sans-serif; background: white; }
+    html, body { margin: 0; padding: 20px; font-family: sans-serif; background: #fff; }
     #rendered { font-size: 16px; }
     #rendered p { margin: 0 0 1em; line-height: 1.6; }
     #rendered br { display: block; margin-top: 0.6em; }
@@ -24,7 +24,9 @@
   <div id="rendered">Loading…</div>
   <script>
     function preprocessMarkdown(md) {
-      return md.replace(/\n{3,}/g, match => '\n\n' + '<div class="spacer"></div>\n'.repeat(match.length - 2));
+      return md.replace(/\n{3,}/g, match =>
+        '\n\n' + '<div class="spacer"></div>\n'.repeat(match.length - 2)
+      );
     }
 
     const raw = decodeURIComponent(location.hash.slice(1));
