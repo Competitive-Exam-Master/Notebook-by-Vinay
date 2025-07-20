@@ -16,6 +16,7 @@ registerPlugin({
         { label: "📐 Math", submenu: "math" },
         { label: "🎨 UI", submenu: "theme" },
         { label: "📂 File", submenu: "file" },
+        { label: "🖼️ Media", submenu: "media" },
         { label: "🆘 Help", submenu: "help" }
       ],
       text: [
@@ -40,10 +41,46 @@ registerPlugin({
         { label: "📄 Export", fn: exportMD },
         { label: "Back ◀️", submenu: "main" }
       ],
+      media: [
+        {
+          label: "🖼️ Insert Image",
+          fn: () => {
+            const inputEl = document.createElement("input");
+            inputEl.type = "file";
+            inputEl.accept = "image/*";
+            inputEl.style.display = "none";
+            inputEl.onchange = (e) => {
+              const file = e.target.files[0];
+              if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                  const markdown = `![Alt text](${evt.target.result})`;
+                  const pos = input.selectionStart;
+                  input.setRangeText(markdown, pos, pos, 'end');
+                  updatePreview(input.value);
+                  input.focus();
+                  setTimeout(() => input.setSelectionRange(pos + markdown.length, pos + markdown.length), 0);
+                };
+                reader.readAsDataURL(file);
+              }
+            };
+            document.body.appendChild(inputEl);
+            inputEl.click();
+          }
+        },
+        { label: "Wrap Left", fn: () => insert('<p align="left"><img src="..." /></p>') },
+        { label: "Wrap Center", fn: () => insert('<p align="center"><img src="..." /></p>') },
+        { label: "Wrap Right", fn: () => insert('<p align="right"><img src="..." /></p>') },
+        { label: "Back ◀️", submenu: "main" }
+      ],
       help: [
         {
           label: "❔ Quick Tips",
-          fn: () => alert(`Editor Tips:\n• Use ⬅️ Back to return\n• Scroll toolbar for hidden buttons\n• Type Markdown + MathJax\n• Drag divider to resize`)
+          fn: () => alert(`Editor Tips:
+• Use ⬅️ Back to return
+• Type Markdown + Math
+• Drag divider to resize
+• Scroll toolbar for more buttons`)
         },
         { label: "Back ◀️", submenu: "main" }
       ]
@@ -65,7 +102,6 @@ registerPlugin({
       });
     }
 
-    // 🔧 Helpers with keyboard-safe focus
     function wrap(before, after) {
       const s = input.selectionStart, e = input.selectionEnd;
       input.setRangeText(before + input.value.slice(s, e) + after, s, e, 'end');
@@ -73,6 +109,14 @@ registerPlugin({
       input.focus();
       const cursor = s + before.length + (e - s) + after.length;
       setTimeout(() => input.setSelectionRange(cursor, cursor), 0);
+    }
+
+    function insert(text) {
+      const pos = input.selectionStart;
+      input.setRangeText(text, pos, pos, 'end');
+      updatePreview(input.value);
+      input.focus();
+      setTimeout(() => input.setSelectionRange(pos + text.length, pos + text.length), 0);
     }
 
     function linePrefix(prefix) {
@@ -86,14 +130,6 @@ registerPlugin({
       input.focus();
       const newPos = lineStart + prefix.length;
       setTimeout(() => input.setSelectionRange(newPos, newPos), 0);
-    }
-
-    function insert(text) {
-      const pos = input.selectionStart;
-      input.setRangeText(text, pos, pos, 'end');
-      updatePreview(input.value);
-      input.focus();
-      setTimeout(() => input.setSelectionRange(pos + text.length, pos + text.length), 0);
     }
 
     let dark = false;
