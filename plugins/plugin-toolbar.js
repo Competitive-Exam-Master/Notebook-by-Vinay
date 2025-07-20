@@ -4,94 +4,65 @@ registerPlugin({
   name: 'toolbar',
   setup({ input, updatePreview }) {
     const bar = document.getElementById('plugin-bar');
+    bar.innerHTML = ''; // Clear if rerun
+    bar.style.overflowX = 'auto';
+    bar.style.whiteSpace = 'nowrap';
 
-    function add(label, action) {
-      const btn = document.createElement("button");
-      btn.textContent = label;
-      btn.onclick = action;
-      bar.appendChild(btn);
+    let currentMenu = 'main';
+
+    const menus = {
+      main: [
+        { label: "Bold", fn: () => wrap("**", "**") },
+        { label: "Italic", fn: () => wrap("*", "*") },
+        { label: "Heading", fn: () => linePrefix("# ") },
+        { label: "Math 📐", submenu: "math" },
+        { label: "Theme", fn: toggleTheme },
+        { label: "Help", fn: showHelp },
+        { label: "Preview", fn: () => openPreview() },
+        { label: "Save", fn: () => save() },
+        { label: "Load", fn: () => load() },
+        { label: "Export", fn: () => exportMD() }
+      ],
+      math: [
+        { label: "Inline $x$", fn: () => wrap("$", "$") },
+        { label: "Block $$...$$", fn: () => insert("$$\n\\int_0^1 x dx\n$$") },
+        { label: "Back ◀️", submenu: "main" }
+      ]
+    };
+
+    function renderMenu(menuKey) {
+      bar.innerHTML = '';
+      menus[menuKey].forEach(item => {
+        const btn = document.createElement('button');
+        btn.textContent = item.label;
+        if (item.fn) btn.onclick = item.fn;
+        else if (item.submenu) btn.onclick = () => {
+          currentMenu = item.submenu;
+          renderMenu(currentMenu);
+        };
+        bar.appendChild(btn);
+      });
     }
 
-    // ✍️ Formatting
-    add("Bold", () => wrap("**", "**"));
-    add("Italic", () => wrap("*", "*"));
-    add("Heading", () => linePrefix("# "));
+    renderMenu(currentMenu);
 
-    // 🧮 Math Templates
-    add("Inline $x$", () => wrap("$", "$"));
-    add("Block $$...$$", () => insert("$$\n\\int_0^1 x dx\n$$"));
-
-    // 🎨 Theme toggle
-    let dark = false;
-    add("🌓 Theme", () => {
-      document.body.style.background = dark ? "#fdfdfd" : "#222";
-      document.body.style.color = dark ? "black" : "#ddd";
-      document.querySelectorAll("button").forEach(btn =>
-        btn.style.background = dark ? "#444" : "#eee"
-      );
-      dark = !dark;
-    });
-
-    // 🆘 Help
-    add("❔ Help", () => {
-      alert(`Editor Shortcuts:
-• Bold/Italic/Heading
-• Math: $x$ or $$...$$
-• Drag the divider to resize
-• Use toolbar to export or preview`);
-    });
-
-    // 🔗 Preview + Save/Load/Export
-    add("🔗 Preview", () => {
-      const encoded = encodeURIComponent(input.value);
-      window.open("preview.html#" + encoded, "_blank");
-    });
-
-    add("💾 Save", () => {
-      localStorage.setItem("markdownDraft", input.value);
-      alert("Saved!");
-    });
-
-    add("📂 Load", () => {
-      const draft = localStorage.getItem("markdownDraft");
-      if (draft) {
-        input.value = draft;
-        updatePreview(draft);
-        input.focus();
-        setTimeout(() => input.setSelectionRange(input.value.length, input.value.length), 0);
-      } else {
-        alert("No draft found.");
-      }
-    });
-
-    add("📄 Export", () => {
-      const blob = new Blob([input.value], { type: "text/plain" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "draft.md";
-      a.click();
-    });
-
-    // 🔧 Utilities with keyboard-safe focus
+    // 🔧 Utilities
     function wrap(before, after) {
-      const s = input.selectionStart;
-      const e = input.selectionEnd;
+      const s = input.selectionStart, e = input.selectionEnd;
       const selected = input.value.slice(s, e);
-      const newText = before + selected + after;
-      input.setRangeText(newText, s, e, 'end');
+      input.setRangeText(before + selected + after, s, e, 'end');
       updatePreview(input.value);
       input.focus();
       const cursor = s + before.length + selected.length + after.length;
       setTimeout(() => input.setSelectionRange(cursor, cursor), 0);
     }
 
-    function insert(content) {
+    function insert(text) {
       const pos = input.selectionStart;
-      input.setRangeText(content, pos, pos, 'end');
+      input.setRangeText(text, pos, pos, 'end');
       updatePreview(input.value);
       input.focus();
-      const cursor = pos + content.length;
-      setTimeout(() => input.setSelectionRange(cursor, cursor), 0);
+      setTimeout(() => input.setSelectionRange(pos + text.length, pos + text.length), 0);
     }
 
     function linePrefix(prefix) {
@@ -105,6 +76,55 @@ registerPlugin({
       input.focus();
       const newPos = lineStart + prefix.length;
       setTimeout(() => input.setSelectionRange(newPos, newPos), 0);
+    }
+
+    let dark = false;
+    function toggleTheme() {
+      document.body.style.background = dark ? "#fdfdfd" : "#222";
+      document.body.style.color = dark ? "black" : "#ddd";
+      document.querySelectorAll("button").forEach(btn =>
+        btn.style.background = dark ? "#444" : "#eee"
+      );
+      dark = !dark;
+    }
+
+    function showHelp() {
+      alert(`Editor Tips:
+• Bold / Italic / Headings
+• Switch to Math submenu for equations
+• Drag split handle to resize editor
+• Toolbar scrolls horizontally
+• Tap 'Back ◀️' to return to Main menu`);
+    }
+
+    function openPreview() {
+      const encoded = encodeURIComponent(input.value);
+      window.open("preview.html#" + encoded, "_blank");
+    }
+
+    function save() {
+      localStorage.setItem("markdownDraft", input.value);
+      alert("Saved!");
+    }
+
+    function load() {
+      const draft = localStorage.getItem("markdownDraft");
+      if (draft) {
+        input.value = draft;
+        updatePreview(draft);
+        input.focus();
+        setTimeout(() => input.setSelectionRange(input.value.length, input.value.length), 0);
+      } else {
+        alert("No draft found.");
+      }
+    }
+
+    function exportMD() {
+      const blob = new Blob([input.value], { type: "text/plain" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "draft.md";
+      a.click();
     }
   }
 });
