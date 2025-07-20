@@ -3,183 +3,73 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width" />
-  <title>Markdown + MathJax Editor</title>
-
-  <!-- Libraries -->
+  <title>Visual Markdown Editor</title>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script>
     window.MathJax = {
-      tex: {
-        inlineMath: [['$', '$']],
-        displayMath: [['$$', '$$']]
-      },
+      tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] },
       svg: { fontCache: 'global' }
     };
   </script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-
-  <!-- Styles -->
   <style>
-    html, body {
-      margin: 0;
-      height: 100%;
-      font-family: sans-serif;
-      background: #fdfdfd;
-    }
-    .container {
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      display: flex;
-      flex-direction: column;
-    }
-    .top-half {
-      height: 50%;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    #editor-pane {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow-y: auto;
-    }
-    #input {
-      flex: 1;
-      padding: 16px;
-      font-size: 16px;
-      font-family: monospace;
-      border: none;
-      outline: none;
-      resize: none;
-      background: #eef;
-      overflow-y: auto;
-      box-sizing: border-box;
-    }
-    #plugin-bar {
-      padding: 8px;
-      background: #ddd;
-      display: block;
-      overflow-x: auto;
-      white-space: nowrap;
-      border-top: 1px solid #ccc;
-      -webkit-overflow-scrolling: touch;
-    }
-    #plugin-bar button {
-      display: inline-block;
-      margin-right: 8px;
-      font-size: 14px;
-      padding: 6px 12px;
-      border-radius: 4px;
-      border: none;
-      background: #444;
-      color: white;
-      cursor: pointer;
-    }
-    .divider {
-      height: 16px;
-      background: #888;
-      position: relative;
-      flex-shrink: 0;
-    }
-    .drag-btn {
-      position: absolute;
-      top: -8px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 40px;
-      height: 40px;
-      background: #333;
-      border-radius: 50%;
-      border: 2px solid #fff;
-      box-shadow: 0 0 5px rgba(0,0,0,0.3);
-      cursor: row-resize;
-      touch-action: none;
-      z-index: 10;
-    }
-    .bottom-half {
-      flex: 1;
-      background: #fff0f5;
-      overflow-y: auto;
-      padding: 12px;
-    }
-    #output p { margin: 0 0 1em; line-height: 1.6; }
-    #output br { display: block; margin-top: 0.6em; }
-    #output .spacer { height: 1.6em; display: block; }
+    html, body { margin: 0; height: 100%; font-family: sans-serif; }
+    #editor { height: 50%; padding: 16px; overflow-y: auto; border-bottom: 1px solid #ccc; }
+    #editor[contenteditable] { outline: none; background: #eef; }
+    #toolbar { padding: 8px; background: #ddd; white-space: nowrap; overflow-x: auto; }
+    #toolbar button { margin-right: 8px; padding: 6px 12px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+    #output { height: 50%; padding: 12px; overflow-y: auto; background: #fff0f5; }
     img { max-width: 100%; margin: 8px 0; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="top-half">
-      <div id="editor-pane">
-        <textarea id="input" placeholder="Type Markdown + MathJax…"></textarea>
-        <div id="plugin-bar"></div>
-      </div>
-    </div>
-    <div class="divider"><div class="drag-btn"></div></div>
-    <div class="bottom-half"><div id="output"></div></div>
-  </div>
 
-  <script type="module">
-    import { initPlugins } from './plugin-loader.js';
+<div id="toolbar">
+  <button onclick="insertImage()">🖼️ Insert Image</button>
+  <button onclick="renderPreview()">🔄 Preview</button>
+</div>
 
-    const input = document.getElementById("input");
-    const output = document.getElementById("output");
-    const dragBtn = document.querySelector(".drag-btn");
-    const topHalf = document.querySelector(".top-half");
+<div id="editor" contenteditable="true">
+  <h3>Start writing…</h3>
+  <p>You can insert images directly.</p>
+</div>
 
-    function preprocess(md) {
-      return md.replace(/\n{3,}/g, match =>
-        '\n\n' + '<div class="spacer"></div>\n'.repeat(match.length - 2)
-      );
-    }
+<div id="output"></div>
 
-    function updatePreview(text) {
-      const stripped = text.replace(/<!--\s*data:image[^>]*-->/g, '');
-      let html = marked.parse(preprocess(stripped), { breaks: true });
+<script>
+  const editor = document.getElementById("editor");
+  const output = document.getElementById("output");
 
-      html = html.replace(/\[📷 Image (\d+)\]/g, (_, num) => {
-        const key = `[📷 Image ${num}]`;
-        const src = window.imageMap?.[key];
-        return src ? `<img src="${src}" alt="Image ${num}" />` : key;
-      });
-
-      output.innerHTML = html;
-      MathJax.typesetClear();
-      MathJax.typesetPromise([output]);
-    }
-
-    input.addEventListener("input", () => updatePreview(input.value));
-
-    window.onload = () => {
-      window.imageMap = {};
-      input.value = `# 🖼️ Image Workflow Demo
-
-Tap Insert Image ➕  
-• Code shows \`[📷 Image 1]\`, not base64  
-• Preview shows actual image  
-• Import stays clean ✨
-
-$e^{i\\pi} + 1 = 0$
-
-$$
-\\int_0^1 x dx = \\frac{1}{2}
-$$
-`;
-      updatePreview(input.value);
+  function insertImage() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.style.display = "none";
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = evt => {
+          const img = document.createElement("img");
+          img.src = evt.target.result;
+          img.alt = "Image";
+          editor.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+      }
     };
+    document.body.appendChild(input);
+    input.click();
+  }
 
-    let isDragging = false;
-    dragBtn.addEventListener("pointerdown", e => { isDragging = true; e.preventDefault(); });
-    window.addEventListener("pointermove", e => {
-      if (!isDragging) return;
-      const newHeight = Math.min(window.innerHeight - 80, Math.max(80, e.clientY));
-      topHalf.style.height = `${newHeight}px`;
-    });
-    window.addEventListener("pointerup", () => isDragging = false);
+  function renderPreview() {
+    const raw = editor.innerHTML;
+    const html = marked.parse(raw, { breaks: true });
+    output.innerHTML = html;
+    MathJax.typesetClear();
+    MathJax.typesetPromise([output]);
+  }
+</script>
 
-    initPlugins({ input, output, updatePreview });
-  </script>
 </body>
 </html>
