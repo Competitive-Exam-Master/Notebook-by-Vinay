@@ -121,7 +121,7 @@
     <div class="bottom-half"><div id="output"></div></div>
   </div>
 
-  <!-- Main Script -->
+  <!-- Script -->
   <script type="module">
     import { initPlugins } from './plugin-loader.js';
 
@@ -139,11 +139,11 @@
     function updatePreview(text) {
       let html = marked.parse(preprocess(text), { breaks: true });
 
-      // Replace [📷 Image N] labels with <img> from memory
+      // Replace image labels with real base64 src from imageMap
       html = html.replace(/\[📷 Image (\d+)\]/g, (_, num) => {
-        const key = `[📷 Image ${num}]`;
-        const src = window.imageMap?.[key];
-        return src ? `<img src="${src}" alt="Image ${num}"/>` : key;
+        const label = `[📷 Image ${num}]`;
+        const src = window.imageMap?.[label];
+        return src ? `<img src="${src}" alt="Image ${num}" />` : label;
       });
 
       output.innerHTML = html;
@@ -154,12 +154,13 @@
     input.addEventListener("input", () => updatePreview(input.value));
 
     window.onload = () => {
-      window.imageMap = {}; // initialize empty image store
-      input.value = `# 📷 Image Preview Demo
+      window.imageMap = {}; // init empty
+      input.value = `# 🖼️ Toolbar Image Test
 
-Try inserting an image from the toolbar ➕  
-It shows clean label in code like \`[📷 Image 1]\`  
-...and renders full image in preview 📸
+Try inserting an image from the Media menu ➕  
+• It shows only label like \`[📷 Image 1]\` in code  
+• Renders full image in preview  
+• Import stays clean ✅
 
 $e^{i\\pi} + 1 = 0$
 
