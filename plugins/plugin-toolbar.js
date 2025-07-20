@@ -54,12 +54,13 @@ registerPlugin({
               if (file) {
                 const reader = new FileReader();
                 reader.onload = function(evt) {
-                  const markdown = `![Alt text](${evt.target.result})`;
+                  const imgData = evt.target.result;
+                  const compactLabel = `[📷 Inserted Image]\n<!-- ${imgData} -->`;
                   const pos = input.selectionStart;
-                  input.setRangeText(markdown, pos, pos, 'end');
+                  input.setRangeText(compactLabel, pos, pos, 'end');
                   updatePreview(input.value);
                   input.focus();
-                  setTimeout(() => input.setSelectionRange(pos + markdown.length, pos + markdown.length), 0);
+                  setTimeout(() => input.setSelectionRange(pos + compactLabel.length, pos + compactLabel.length), 0);
                 };
                 reader.readAsDataURL(file);
               }
@@ -78,9 +79,9 @@ registerPlugin({
           label: "❔ Quick Tips",
           fn: () => alert(`Editor Tips:
 • Use ⬅️ Back to return
+• Scroll toolbar for hidden buttons
 • Type Markdown + Math
-• Drag divider to resize
-• Scroll toolbar for more buttons`)
+• Drag divider to resize`)
         },
         { label: "Back ◀️", submenu: "main" }
       ]
