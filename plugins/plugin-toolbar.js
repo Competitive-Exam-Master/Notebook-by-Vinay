@@ -4,7 +4,7 @@ registerPlugin({
   name: 'toolbar',
   setup({ input, updatePreview }) {
     const bar = document.getElementById('plugin-bar');
-    bar.innerHTML = ''; // Clear if rerun
+    bar.innerHTML = '';
     bar.style.overflowX = 'auto';
     bar.style.whiteSpace = 'nowrap';
 
@@ -12,28 +12,49 @@ registerPlugin({
 
     const menus = {
       main: [
+        { label: "✍️ Text", submenu: "text" },
+        { label: "📐 Math", submenu: "math" },
+        { label: "🎨 UI", submenu: "theme" },
+        { label: "📂 File", submenu: "file" },
+        { label: "🆘 Help", submenu: "help" }
+      ],
+      text: [
         { label: "Bold", fn: () => wrap("**", "**") },
         { label: "Italic", fn: () => wrap("*", "*") },
         { label: "Heading", fn: () => linePrefix("# ") },
-        { label: "Math 📐", submenu: "math" },
-        { label: "Theme", fn: toggleTheme },
-        { label: "Help", fn: showHelp },
-        { label: "Preview", fn: () => openPreview() },
-        { label: "Save", fn: () => save() },
-        { label: "Load", fn: () => load() },
-        { label: "Export", fn: () => exportMD() }
+        { label: "Back ◀️", submenu: "main" }
       ],
       math: [
         { label: "Inline $x$", fn: () => wrap("$", "$") },
         { label: "Block $$...$$", fn: () => insert("$$\n\\int_0^1 x dx\n$$") },
         { label: "Back ◀️", submenu: "main" }
+      ],
+      theme: [
+        { label: "🌓 Toggle Theme", fn: toggleTheme },
+        { label: "Back ◀️", submenu: "main" }
+      ],
+      file: [
+        { label: "🔗 Preview", fn: preview },
+        { label: "💾 Save", fn: save },
+        { label: "📂 Load", fn: load },
+        { label: "📄 Export", fn: exportMD },
+        { label: "Back ◀️", submenu: "main" }
+      ],
+      help: [
+        {
+          label: "❔ Quick Tips",
+          fn: () => alert(`Editor Tips:\n• Use ⬅️ Back to return\n• Scroll toolbar for hidden buttons\n• Type Markdown + MathJax\n• Drag divider to resize`)
+        },
+        { label: "Back ◀️", submenu: "main" }
       ]
     };
+
+    renderMenu(currentMenu);
 
     function renderMenu(menuKey) {
       bar.innerHTML = '';
       menus[menuKey].forEach(item => {
-        const btn = document.createElement('button');
+        const btn = document.createElement("button");
         btn.textContent = item.label;
         if (item.fn) btn.onclick = item.fn;
         else if (item.submenu) btn.onclick = () => {
@@ -44,17 +65,27 @@ registerPlugin({
       });
     }
 
-    renderMenu(currentMenu);
-
-    // 🔧 Utilities
+    // 🔧 Helpers with keyboard-safe focus
     function wrap(before, after) {
       const s = input.selectionStart, e = input.selectionEnd;
-      const selected = input.value.slice(s, e);
-      input.setRangeText(before + selected + after, s, e, 'end');
+      input.setRangeText(before + input.value.slice(s, e) + after, s, e, 'end');
       updatePreview(input.value);
       input.focus();
-      const cursor = s + before.length + selected.length + after.length;
+      const cursor = s + before.length + (e - s) + after.length;
       setTimeout(() => input.setSelectionRange(cursor, cursor), 0);
+    }
+
+    function linePrefix(prefix) {
+      const lines = input.value.split("\n");
+      const pos = input.selectionStart;
+      const idx = input.value.slice(0, pos).split("\n").length - 1;
+      const lineStart = lines.slice(0, idx).join("\n").length + (idx > 0 ? 1 : 0);
+      lines[idx] = prefix + lines[idx];
+      input.value = lines.join("\n");
+      updatePreview(input.value);
+      input.focus();
+      const newPos = lineStart + prefix.length;
+      setTimeout(() => input.setSelectionRange(newPos, newPos), 0);
     }
 
     function insert(text) {
@@ -63,19 +94,6 @@ registerPlugin({
       updatePreview(input.value);
       input.focus();
       setTimeout(() => input.setSelectionRange(pos + text.length, pos + text.length), 0);
-    }
-
-    function linePrefix(prefix) {
-      const lines = input.value.split("\n");
-      const pos = input.selectionStart;
-      const lineIndex = input.value.slice(0, pos).split("\n").length - 1;
-      const lineStart = lines.slice(0, lineIndex).join("\n").length + (lineIndex > 0 ? 1 : 0);
-      lines[lineIndex] = prefix + lines[lineIndex];
-      input.value = lines.join("\n");
-      updatePreview(input.value);
-      input.focus();
-      const newPos = lineStart + prefix.length;
-      setTimeout(() => input.setSelectionRange(newPos, newPos), 0);
     }
 
     let dark = false;
@@ -88,16 +106,7 @@ registerPlugin({
       dark = !dark;
     }
 
-    function showHelp() {
-      alert(`Editor Tips:
-• Bold / Italic / Headings
-• Switch to Math submenu for equations
-• Drag split handle to resize editor
-• Toolbar scrolls horizontally
-• Tap 'Back ◀️' to return to Main menu`);
-    }
-
-    function openPreview() {
+    function preview() {
       const encoded = encodeURIComponent(input.value);
       window.open("preview.html#" + encoded, "_blank");
     }
