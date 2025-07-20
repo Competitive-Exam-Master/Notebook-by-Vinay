@@ -45,11 +45,11 @@ registerPlugin({
         {
           label: "🖼️ Insert Image",
           fn: () => {
-            const fileInput = document.createElement("input");
-            fileInput.type = "file";
-            fileInput.accept = "image/*";
-            fileInput.style.display = "none";
-            fileInput.onchange = (e) => {
+            const inputEl = document.createElement("input");
+            inputEl.type = "file";
+            inputEl.accept = "image/*";
+            inputEl.style.display = "none";
+            inputEl.onchange = (e) => {
               const file = e.target.files[0];
               if (file) {
                 const reader = new FileReader();
@@ -68,8 +68,8 @@ registerPlugin({
                 reader.readAsDataURL(file);
               }
             };
-            document.body.appendChild(fileInput);
-            fileInput.click();
+            document.body.appendChild(inputEl);
+            inputEl.click();
           }
         },
         { label: "Wrap Left", fn: () => wrapNearestImage("left") },
@@ -81,9 +81,9 @@ registerPlugin({
         {
           label: "❔ Quick Tips",
           fn: () => alert(`Editor Tips:
-• Insert image → shows label, hides base64
-• Load will auto-clean base64 into labels
-• Preview will restore full images from memory`)
+• Images show only icons in code
+• Preview renders full image
+• Load cleans up base64 duplicates`)
         },
         { label: "Back ◀️", submenu: "main" }
       ]
@@ -160,7 +160,6 @@ registerPlugin({
       lines[imgLine] = `<p align="${align}">${lines[imgLine]}</p>`;
       input.value = lines.join("\n");
       updatePreview(input.value);
-
       const offset = lines.slice(0, imgLine + 1).join("\n").length;
       input.focus();
       setTimeout(() => input.setSelectionRange(offset, offset), 0);
@@ -191,30 +190,35 @@ registerPlugin({
       if (!draft) return alert("No draft found.");
 
       const lines = draft.split("\n");
-      window.imageMap = {}; // Reset
+      window.imageMap = {}; // Reset map
+      let cleaned = [];
       let counter = 1;
 
       for (let i = 0; i < lines.length; i++) {
-        if (lines[i].startsWith("<!--") && lines[i].includes("data:image")) {
-          const base64 = lines[i].slice(4, -3).trim();
+        const line = lines[i].trim();
+        if (line.startsWith("<!--") && line.includes("data:image")) {
+          const base64 = line.slice(4, -3).trim();
           const label = `[📷 Image ${counter}]`;
-          window.imageMap[label] = base64;
 
-          if (i > 0 && lines[i - 1].startsWith("[📷")) {
-            lines[i] = ""; // Remove base64 line
-          } else {
-            lines[i] = label;
+          if (cleaned.length > 0 && cleaned[cleaned.length - 1].startsWith("[📷")) {
+            window.imageMap[cleaned[cleaned.length - 1]] = base64;
+            counter++;
+            continue;
           }
 
+          window.imageMap[label] = base64;
+          cleaned.push(label);
           counter++;
+        } else {
+          cleaned.push(line);
         }
       }
 
-      const cleaned = lines.filter(line => line !== "").join("\n");
-      input.value = cleaned;
-      updatePreview(cleaned);
+      const result = cleaned.join("\n");
+      input.value = result;
+      updatePreview(result);
       input.focus();
-      setTimeout(() => input.setSelectionRange(cleaned.length, cleaned.length), 0);
+      setTimeout(() => input.setSelectionRange(result.length, result.length), 0);
     }
 
     function exportMD() {
