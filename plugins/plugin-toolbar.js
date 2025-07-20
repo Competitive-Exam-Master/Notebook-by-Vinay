@@ -53,7 +53,7 @@ registerPlugin({
               if (file) {
                 const reader = new FileReader();
                 reader.onload = function(evt) {
-                  if (!window.imageMap) window.imageMap = {};
+                  window.imageMap = window.imageMap || {};
                   const imgCount = Object.keys(window.imageMap).length + 1;
                   const label = `[📷 Image ${imgCount}]`;
                   window.imageMap[label] = evt.target.result;
@@ -79,10 +79,7 @@ registerPlugin({
       help: [
         {
           label: "❔ Quick Tips",
-          fn: () => alert(`Images now:
-• show icon labels in editor
-• render full image in preview
-• remove base64 blobs on import`)
+          fn: () => alert(`• Clean editor with compact image labels\n• Full preview rendering\n• No base64 clutter or duplicate images`)
         },
         { label: "Back ◀️", submenu: "main" }
       ]
@@ -95,11 +92,10 @@ registerPlugin({
       menus[menuKey].forEach(item => {
         const btn = document.createElement("button");
         btn.textContent = item.label;
-        if (item.fn) btn.onclick = item.fn;
-        else if (item.submenu) btn.onclick = () => {
+        btn.onclick = item.fn || (() => {
           currentMenu = item.submenu;
           renderMenu(currentMenu);
-        };
+        });
         bar.appendChild(btn);
       });
     }
@@ -124,34 +120,30 @@ registerPlugin({
       const lines = input.value.split("\n");
       const pos = input.selectionStart;
       const idx = input.value.slice(0, pos).split("\n").length - 1;
-      const lineStart = lines.slice(0, idx).join("\n").length + (idx > 0 ? 1 : 0);
       lines[idx] = prefix + lines[idx];
       input.value = lines.join("\n");
       updatePreview(input.value);
       input.focus();
-      setTimeout(() => input.setSelectionRange(lineStart + prefix.length, lineStart + prefix.length), 0);
+      const newPos = lines.slice(0, idx + 1).join("\n").length;
+      setTimeout(() => input.setSelectionRange(newPos, newPos), 0);
     }
 
     function wrapNearestImage(align) {
       const lines = input.value.split("\n");
       const pos = input.selectionStart;
-      const lineIndex = input.value.slice(0, pos).split("\n").length - 1;
-
-      let imgLine = -1;
-      for (let i = lineIndex; i >= 0; i--) {
-        if (lines[i].includes("![") || lines[i].includes("[📷") || lines[i].includes("<img")) {
-          imgLine = i;
-          break;
+      const idx = input.value.slice(0, pos).split("\n").length - 1;
+      let target = -1;
+      for (let i = idx; i >= 0; i--) {
+        if (lines[i].includes("[📷") || lines[i].includes("![") || lines[i].includes("<img")) {
+          target = i; break;
         }
       }
-
-      if (imgLine === -1) return alert("No image found above the cursor.");
-
-      lines[imgLine] = `<p align="${align}">${lines[imgLine]}</p>`;
+      if (target === -1) return alert("No image found above the cursor.");
+      lines[target] = `<p align="${align}">${lines[target]}</p>`;
       input.value = lines.join("\n");
       updatePreview(input.value);
-      const offset = lines.slice(0, imgLine + 1).join("\n").length;
       input.focus();
+      const offset = lines.slice(0, target + 1).join("\n").length;
       setTimeout(() => input.setSelectionRange(offset, offset), 0);
     }
 
@@ -163,7 +155,6 @@ registerPlugin({
         btn.style.background = dark ? "#444" : "#eee"
       );
     }
-
     let dark = false;
 
     function preview() {
@@ -190,19 +181,17 @@ registerPlugin({
         if (line.startsWith("<!--") && line.includes("data:image")) {
           const base64 = line.slice(4, -3).trim();
           const label = `[📷 Image ${counter}]`;
-
           if (cleaned.length > 0 && cleaned[cleaned.length - 1] === label) {
             window.imageMap[label] = base64;
             counter++;
             continue;
           }
-
           window.imageMap[label] = base64;
           cleaned.push(label);
           counter++;
-        } else if (!line.startsWith("<!--") || !line.includes("data:image")) {
-          cleaned.push(line);
+          continue;
         }
+        cleaned.push(line);
       }
 
       const result = cleaned.join("\n");
