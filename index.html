@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width" />
   <title>Markdown + MathJax Editor</title>
 
-  <!-- Libraries -->
+  <!-- Markdown + Math Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script>
     window.MathJax = {
@@ -106,6 +106,7 @@
     #output p { margin: 0 0 1em; line-height: 1.6; }
     #output br { display: block; margin-top: 0.6em; }
     #output .spacer { height: 1.6em; display: block; }
+    img { max-width: 100%; margin: 8px 0; }
   </style>
 </head>
 <body>
@@ -120,7 +121,7 @@
     <div class="bottom-half"><div id="output"></div></div>
   </div>
 
-  <!-- Script -->
+  <!-- Main Script -->
   <script type="module">
     import { initPlugins } from './plugin-loader.js';
 
@@ -136,7 +137,15 @@
     }
 
     function updatePreview(text) {
-      const html = marked.parse(preprocess(text), { breaks: true });
+      let html = marked.parse(preprocess(text), { breaks: true });
+
+      // Replace [📷 Image N] labels with <img> from memory
+      html = html.replace(/\[📷 Image (\d+)\]/g, (_, num) => {
+        const key = `[📷 Image ${num}]`;
+        const src = window.imageMap?.[key];
+        return src ? `<img src="${src}" alt="Image ${num}"/>` : key;
+      });
+
       output.innerHTML = html;
       MathJax.typesetClear();
       MathJax.typesetPromise([output]);
@@ -145,23 +154,18 @@
     input.addEventListener("input", () => updatePreview(input.value));
 
     window.onload = () => {
-      input.value = `# 🧪 Scrollable Toolbar
+      window.imageMap = {}; // initialize empty image store
+      input.value = `# 📷 Image Preview Demo
 
-Try horizontal scroll ➡️  
-Switch to math submenu 📐  
-And preview your results 🔗
+Try inserting an image from the toolbar ➕  
+It shows clean label in code like \`[📷 Image 1]\`  
+...and renders full image in preview 📸
 
 $e^{i\\pi} + 1 = 0$
 
 $$
 \\int_0^1 x dx = \\frac{1}{2}
 $$
-
-
-
-Blank line spacing test
-
-
 `;
       updatePreview(input.value);
     };
