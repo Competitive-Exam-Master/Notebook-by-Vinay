@@ -12,16 +12,16 @@ registerPlugin({
       bar.appendChild(btn);
     }
 
-    // Formatting
+    // ✍️ Formatting
     add("Bold", () => wrap("**", "**"));
     add("Italic", () => wrap("*", "*"));
     add("Heading", () => linePrefix("# "));
 
-    // Math Templates
+    // 🧮 Math Templates
     add("Inline $x$", () => wrap("$", "$"));
     add("Block $$...$$", () => insert("$$\n\\int_0^1 x dx\n$$"));
 
-    // Theme
+    // 🎨 Theme toggle
     let dark = false;
     add("🌓 Theme", () => {
       document.body.style.background = dark ? "#fdfdfd" : "#222";
@@ -32,16 +32,16 @@ registerPlugin({
       dark = !dark;
     });
 
-    // Help
+    // 🆘 Help
     add("❔ Help", () => {
       alert(`Editor Shortcuts:
 • Bold/Italic/Heading
 • Math: $x$ or $$...$$
-• Drag circle to resize
-• Use toolbar to export/preview`);
+• Drag the divider to resize
+• Use toolbar to export or preview`);
     });
 
-    // Core actions
+    // 🔗 Preview + Save/Load/Export
     add("🔗 Preview", () => {
       const encoded = encodeURIComponent(input.value);
       window.open("preview.html#" + encoded, "_blank");
@@ -70,11 +70,16 @@ registerPlugin({
       a.click();
     });
 
+    // 🔧 Utilities (with keyboard fix)
     function wrap(before, after) {
       const s = input.selectionStart, e = input.selectionEnd;
       const selected = input.value.slice(s, e);
-      input.setRangeText(before + selected + after, s, e, 'end');
+      const newText = before + selected + after;
+
+      input.setRangeText(newText, s, e, 'end');
       updatePreview(input.value);
+      input.focus();
+      setTimeout(() => input.setSelectionRange(s + before.length + selected.length + after.length, s + before.length + selected.length + after.length), 0);
     }
 
     function linePrefix(prefix) {
@@ -84,12 +89,16 @@ registerPlugin({
       lines[idx] = prefix + lines[idx];
       input.value = lines.join("\n");
       updatePreview(input.value);
+      input.focus();
+      setTimeout(() => input.setSelectionRange(pos + prefix.length, pos + prefix.length), 0);
     }
 
     function insert(content) {
       const pos = input.selectionStart;
       input.setRangeText(content, pos, pos, 'end');
       updatePreview(input.value);
+      input.focus();
+      setTimeout(() => input.setSelectionRange(pos + content.length, pos + content.length), 0);
     }
   }
 });
