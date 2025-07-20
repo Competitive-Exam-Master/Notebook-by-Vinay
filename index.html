@@ -6,6 +6,12 @@
   <title>Markdown + MathJax Editor</title>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
   <style>
     html, body {
       margin: 0; padding: 0;
@@ -62,6 +68,9 @@
       background: #ddd;
       border-top: 1px solid #aaa;
       text-align: right;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
     }
     button {
       font-size: 14px; padding: 6px 12px;
@@ -80,6 +89,9 @@
     <div class="bottom-half"><div id="output"></div></div>
     <div class="toolbar">
       <button onclick="openPreview()">🔗 Open Preview</button>
+      <button onclick="saveDraft()">💾 Save Draft</button>
+      <button onclick="loadDraft()">📂 Load Draft</button>
+      <button onclick="exportDraft()">📄 Export</button>
     </div>
   </div>
 
@@ -120,17 +132,43 @@
       window.open("preview.html#" + encoded, "_blank");
     }
 
+    function saveDraft() {
+      localStorage.setItem("markdownDraft", input.value);
+      alert("Draft saved!");
+    }
+
+    function loadDraft() {
+      const draft = localStorage.getItem("markdownDraft");
+      if (draft !== null) {
+        input.value = draft;
+        updatePreview(draft);
+      } else {
+        alert("No draft found.");
+      }
+    }
+
+    function exportDraft() {
+      const blob = new Blob([input.value], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "draft.md";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
     window.onload = () => {
       input.value = `# Welcome
 
 This line is visible.
-This one is right below.
+Another one below.
+
+Multiple breaks:
 
 
-Now we insert some space:
-
-
-Even more spacing here:
+Extra blank lines:
 
 
 
