@@ -1,14 +1,14 @@
 import { registerPlugin } from './index.html';
 
 registerPlugin({
-  name: 'core-toolbar',
+  name: 'toolbar',
   setup({ input, updatePreview }) {
     const container = document.getElementById('plugin-bar');
 
-    function makeButton(label, handler) {
+    function makeButton(label, onClick) {
       const btn = document.createElement('button');
       btn.textContent = label;
-      btn.onclick = handler;
+      btn.onclick = onClick;
       container.appendChild(btn);
     }
 
@@ -19,7 +19,7 @@ registerPlugin({
 
     makeButton("💾 Save", () => {
       localStorage.setItem("markdownDraft", input.value);
-      alert("Draft saved!");
+      alert("Draft saved.");
     });
 
     makeButton("📂 Load", () => {
