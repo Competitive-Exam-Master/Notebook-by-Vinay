@@ -7,7 +7,6 @@ registerPlugin({
     bar.innerHTML = '';
     bar.style.overflowX = 'auto';
     bar.style.whiteSpace = 'nowrap';
-
     let currentMenu = 'main';
 
     const menus = {
@@ -80,10 +79,10 @@ registerPlugin({
       help: [
         {
           label: "❔ Quick Tips",
-          fn: () => alert(`Editor Tips:
-• Images show only icons in code
-• Preview renders full image
-• Load cleans up base64 duplicates`)
+          fn: () => alert(`Images now:
+• show icon labels in editor
+• render full image in preview
+• remove base64 blobs on import`)
         },
         { label: "Back ◀️", submenu: "main" }
       ]
@@ -110,8 +109,7 @@ registerPlugin({
       input.setRangeText(before + input.value.slice(s, e) + after, s, e, 'end');
       updatePreview(input.value);
       input.focus();
-      const cursor = s + before.length + (e - s) + after.length;
-      setTimeout(() => input.setSelectionRange(cursor, cursor), 0);
+      setTimeout(() => input.setSelectionRange(s + before.length + (e - s) + after.length, s + before.length + (e - s) + after.length), 0);
     }
 
     function insert(text) {
@@ -131,31 +129,23 @@ registerPlugin({
       input.value = lines.join("\n");
       updatePreview(input.value);
       input.focus();
-      const newPos = lineStart + prefix.length;
-      setTimeout(() => input.setSelectionRange(newPos, newPos), 0);
+      setTimeout(() => input.setSelectionRange(lineStart + prefix.length, lineStart + prefix.length), 0);
     }
 
     function wrapNearestImage(align) {
       const lines = input.value.split("\n");
       const pos = input.selectionStart;
-      const cursorLine = input.value.slice(0, pos).split("\n").length - 1;
+      const lineIndex = input.value.slice(0, pos).split("\n").length - 1;
 
       let imgLine = -1;
-      for (let i = cursorLine; i >= 0; i--) {
-        if (
-          lines[i].includes("![") ||
-          lines[i].includes("[📷") ||
-          lines[i].includes("<img")
-        ) {
+      for (let i = lineIndex; i >= 0; i--) {
+        if (lines[i].includes("![") || lines[i].includes("[📷") || lines[i].includes("<img")) {
           imgLine = i;
           break;
         }
       }
 
-      if (imgLine === -1) {
-        alert("No image found above the cursor.");
-        return;
-      }
+      if (imgLine === -1) return alert("No image found above the cursor.");
 
       lines[imgLine] = `<p align="${align}">${lines[imgLine]}</p>`;
       input.value = lines.join("\n");
@@ -165,15 +155,16 @@ registerPlugin({
       setTimeout(() => input.setSelectionRange(offset, offset), 0);
     }
 
-    let dark = false;
     function toggleTheme() {
-      document.body.style.background = dark ? "#fdfdfd" : "#222";
-      document.body.style.color = dark ? "black" : "#ddd";
+      dark = !dark;
+      document.body.style.background = dark ? "#222" : "#fdfdfd";
+      document.body.style.color = dark ? "#ddd" : "black";
       document.querySelectorAll("button").forEach(btn =>
         btn.style.background = dark ? "#444" : "#eee"
       );
-      dark = !dark;
     }
+
+    let dark = false;
 
     function preview() {
       const encoded = encodeURIComponent(input.value);
@@ -190,7 +181,7 @@ registerPlugin({
       if (!draft) return alert("No draft found.");
 
       const lines = draft.split("\n");
-      window.imageMap = {}; // Reset map
+      window.imageMap = {};
       let cleaned = [];
       let counter = 1;
 
@@ -200,8 +191,8 @@ registerPlugin({
           const base64 = line.slice(4, -3).trim();
           const label = `[📷 Image ${counter}]`;
 
-          if (cleaned.length > 0 && cleaned[cleaned.length - 1].startsWith("[📷")) {
-            window.imageMap[cleaned[cleaned.length - 1]] = base64;
+          if (cleaned.length > 0 && cleaned[cleaned.length - 1] === label) {
+            window.imageMap[label] = base64;
             counter++;
             continue;
           }
@@ -209,7 +200,7 @@ registerPlugin({
           window.imageMap[label] = base64;
           cleaned.push(label);
           counter++;
-        } else {
+        } else if (!line.startsWith("<!--") || !line.includes("data:image")) {
           cleaned.push(line);
         }
       }
