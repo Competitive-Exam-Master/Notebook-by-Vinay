@@ -55,12 +55,12 @@ registerPlugin({
                 const reader = new FileReader();
                 reader.onload = function(evt) {
                   const imgData = evt.target.result;
-                  const compactLabel = `[📷 Inserted Image]\n<!-- ${imgData} -->`;
+                  const markdown = `[📷 Inserted Image]\n<!-- ${imgData} -->`;
                   const pos = input.selectionStart;
-                  input.setRangeText(compactLabel, pos, pos, 'end');
+                  input.setRangeText(markdown, pos, pos, 'end');
                   updatePreview(input.value);
                   input.focus();
-                  setTimeout(() => input.setSelectionRange(pos + compactLabel.length, pos + compactLabel.length), 0);
+                  setTimeout(() => input.setSelectionRange(pos + markdown.length, pos + markdown.length), 0);
                 };
                 reader.readAsDataURL(file);
               }
@@ -69,9 +69,9 @@ registerPlugin({
             inputEl.click();
           }
         },
-        { label: "Wrap Left", fn: () => insert('<p align="left"><img src="..." /></p>') },
-        { label: "Wrap Center", fn: () => insert('<p align="center"><img src="..." /></p>') },
-        { label: "Wrap Right", fn: () => insert('<p align="right"><img src="..." /></p>') },
+        { label: "Wrap Left", fn: () => wrapNearestImage("left") },
+        { label: "Wrap Center", fn: () => wrapNearestImage("center") },
+        { label: "Wrap Right", fn: () => wrapNearestImage("right") },
         { label: "Back ◀️", submenu: "main" }
       ],
       help: [
@@ -79,9 +79,9 @@ registerPlugin({
           label: "❔ Quick Tips",
           fn: () => alert(`Editor Tips:
 • Use ⬅️ Back to return
-• Scroll toolbar for hidden buttons
-• Type Markdown + Math
-• Drag divider to resize`)
+• Scroll toolbar horizontally
+• Insert images from mobile gallery
+• Drag divider to resize editor`)
         },
         { label: "Back ◀️", submenu: "main" }
       ]
@@ -131,6 +131,37 @@ registerPlugin({
       input.focus();
       const newPos = lineStart + prefix.length;
       setTimeout(() => input.setSelectionRange(newPos, newPos), 0);
+    }
+
+    function wrapNearestImage(align) {
+      const lines = input.value.split("\n");
+      const pos = input.selectionStart;
+      const cursorLine = input.value.slice(0, pos).split("\n").length - 1;
+
+      let imgLine = -1;
+      for (let i = cursorLine; i >= 0; i--) {
+        if (
+          lines[i].includes("![") ||
+          lines[i].includes("[📷") ||
+          lines[i].includes("<img")
+        ) {
+          imgLine = i;
+          break;
+        }
+      }
+
+      if (imgLine === -1) {
+        alert("No image found above the cursor.");
+        return;
+      }
+
+      lines[imgLine] = `<p align="${align}">${lines[imgLine]}</p>`;
+      input.value = lines.join("\n");
+      updatePreview(input.value);
+
+      const offset = lines.slice(0, imgLine + 1).join("\n").length;
+      input.focus();
+      setTimeout(() => input.setSelectionRange(offset, offset), 0);
     }
 
     let dark = false;
