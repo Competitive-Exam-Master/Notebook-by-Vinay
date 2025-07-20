@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Markdown + MathJax Editor</title>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
@@ -63,20 +63,11 @@
     #output .spacer {
       height: 1.6em; display: block;
     }
-    .toolbar {
-      padding: 12px;
-      background: #ddd;
-      border-top: 1px solid #aaa;
-      text-align: right;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    button {
-      font-size: 14px; padding: 6px 12px;
-      border-radius: 4px; border: none;
-      background: #444; color: white;
-      cursor: pointer;
+    iframe.toolbar-frame {
+      border: none;
+      width: 100%;
+      height: 60px;
+      flex-shrink: 0;
     }
   </style>
 </head>
@@ -87,13 +78,7 @@
     </div>
     <div class="divider"><div class="drag-btn"></div></div>
     <div class="bottom-half"><div id="output"></div></div>
-    <div class="toolbar">
-      <button onclick="openPreview()">🔗 Open Preview</button>
-      <button onclick="saveDraft()">💾 Save Draft</button>
-      <button onclick="loadDraft()">📂 Load Draft</button>
-      <button onclick="exportDraft()">📄 Export</button>
-    </div>
-  </div>
+    <iframe src="toolbar.html" class="toolbar-frame" title="Toolbar"></iframe>
 
   <script>
     const input = document.getElementById("input");
@@ -127,17 +112,17 @@
       MathJax.typesetPromise([output]);
     }
 
-    function openPreview() {
+    window.openPreview = function() {
       const encoded = encodeURIComponent(input.value);
       window.open("preview.html#" + encoded, "_blank");
-    }
+    };
 
-    function saveDraft() {
+    window.saveDraft = function() {
       localStorage.setItem("markdownDraft", input.value);
       alert("Draft saved!");
-    }
+    };
 
-    function loadDraft() {
+    window.loadDraft = function() {
       const draft = localStorage.getItem("markdownDraft");
       if (draft !== null) {
         input.value = draft;
@@ -145,9 +130,9 @@
       } else {
         alert("No draft found.");
       }
-    }
+    };
 
-    function exportDraft() {
+    window.exportDraft = function() {
       const blob = new Blob([input.value], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -157,29 +142,24 @@
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    }
+    };
 
     window.onload = () => {
-      input.value = `# Welcome
+      input.value = `# Hello
 
-This line is visible.
-Another one below.
+This is a test.
 
-Multiple breaks:
-
-
-Extra blank lines:
+And here's some space:
 
 
+More space:
 
-Back again.
 
-Inline math: $x^2 + y^2 = z^2$
 
-Block math:
+And math:
 
 $$
-\\sum_{n=1}^\\infty \\frac{1}{n^2} = \\frac{\\pi^2}{6}
+\\int_0^1 x dx = \\frac{1}{2}
 $$`;
       updatePreview(input.value);
     };
