@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width" />
   <title>Markdown + MathJax Editor</title>
 
-  <!-- Markdown + Math Libraries -->
+  <!-- Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script>
     window.MathJax = {
@@ -57,12 +57,24 @@
       box-sizing: border-box;
     }
     #plugin-bar {
-      padding: 12px;
+      padding: 8px;
       background: #ddd;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
       border-top: 1px solid #ccc;
+      -webkit-overflow-scrolling: touch;
+    }
+    #plugin-bar button {
+      display: inline-block;
+      margin-right: 8px;
+      font-size: 14px;
+      padding: 6px 12px;
+      border-radius: 4px;
+      border: none;
+      background: #444;
+      color: white;
+      cursor: pointer;
     }
     .divider {
       height: 16px;
@@ -94,15 +106,6 @@
     #output p { margin: 0 0 1em; line-height: 1.6; }
     #output br { display: block; margin-top: 0.6em; }
     #output .spacer { height: 1.6em; display: block; }
-    button {
-      font-size: 14px;
-      padding: 6px 12px;
-      border-radius: 4px;
-      border: none;
-      background: #444;
-      color: white;
-      cursor: pointer;
-    }
   </style>
 </head>
 <body>
@@ -117,7 +120,7 @@
     <div class="bottom-half"><div id="output"></div></div>
   </div>
 
-  <!-- Main Logic -->
+  <!-- Script -->
   <script type="module">
     import { initPlugins } from './plugin-loader.js';
 
@@ -142,23 +145,21 @@
     input.addEventListener("input", () => updatePreview(input.value));
 
     window.onload = () => {
-      input.value = `# 🧩 Floating Toolbar Demo
+      input.value = `# 🧪 Scrollable Toolbar
 
-This toolbar won't hide behind the keyboard 🤖
+Try horizontal scroll ➡️  
+Switch to math submenu 📐  
+And preview your results 🔗
 
-Inline math: $x^2 + y^2$
-
-Block math:
+$e^{i\\pi} + 1 = 0$
 
 $$
-\\sum_{n=1}^\\infty \\frac{1}{n^2} = \\frac{\\pi^2}{6}
+\\int_0^1 x dx = \\frac{1}{2}
 $$
 
-Line spacing test:
 
 
-
-And again:
+Blank line spacing test
 
 
 `;
