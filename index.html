@@ -6,15 +6,19 @@
     <title>Markdown/MathJax Editor</title>
     
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+        /* Crucial: Ensure html and body explicitly control height and prevent their own scrolling */
+        html, body {
+            height: 100%; /* Ensure html also takes full height */
             margin: 0;
             padding: 0;
+            overflow: hidden; /* Prevent scrolling on html and body */
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
             display: flex;
             flex-direction: column;
             /* Height will be set by JS based on window.innerHeight or visualViewport.height */
             height: var(--app-viewport-height, 100vh); /* Fallback to 100vh */
-            overflow: hidden; /* Prevent body scroll, content areas will scroll */
             background-color: #f4f7f6;
             color: #333;
             padding-bottom: 0; /* Will be set by JS dynamically to make space for toolbar */
@@ -26,9 +30,8 @@
             flex-direction: column;
             padding: 15px;
             gap: 15px; /* Spacing between textarea and render output */
-            overflow: hidden; /* Important for containing scrolling children */
-            /* Height will be explicitly set by JS */
-            height: auto; /* Allow flex-grow to work, JS will override */
+            /* Removed overflow: hidden from container itself to let its children (#markdownInput, #renderOutput) handle scrolling */
+            /* The container's height is managed by JS to fit exactly into the available viewport space */
         }
 
         #markdownInput, #renderOutput {
@@ -41,7 +44,7 @@
             line-height: 1.6;
             border-radius: 8px;
             transition: border-color 0.2s ease-in-out;
-            overflow-y: auto; /* Enable scrolling for content */
+            overflow-y: auto; /* Enable scrolling for content *within these specific elements* */
         }
 
         #markdownInput {
@@ -638,9 +641,8 @@
                 addToolbarItem: addToolbarItem,
                 getContent: getContent,
                 setContent: setContent,
-                toogleView: toggleView,       // Typo fix: Changed to 'toggleView' (consistent with function name)
-                renderContent: renderContent, // Allow add-ons to trigger a re-render
                 toggleView: toggleView,       // Expose toggleView for external control
+                renderContent: renderContent, // Allow add-ons to trigger a re-render
                 getIsCodeView: getIsCodeView  // Expose current view state
             };
         })();
@@ -662,7 +664,7 @@
                 initApp();
             } else {
                 console.error("App initialization function (initApp) not found. Check embedded script.");
-            }
+            });
         });
     </script>
 </body>
