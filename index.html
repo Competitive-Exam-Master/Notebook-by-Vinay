@@ -12,12 +12,13 @@
             padding: 0;
             display: flex;
             flex-direction: column;
-            height: 100vh; /* Full viewport height */
+            /* Set min-height to 100vh to handle initial full screen,
+               but actual height will be controlled by JS for viewport adjustments */
+            min-height: 100vh;
             overflow: hidden; /* Prevent body scroll, content areas will scroll */
             background-color: #f4f7f6;
             color: #333;
-            /* padding-bottom will be set by JavaScript to make space for the fixed toolbar */
-            padding-bottom: 0; 
+            padding-bottom: 0; /* Will be set by JS dynamically */
         }
 
         .container {
@@ -27,6 +28,8 @@
             padding: 15px;
             gap: 15px; /* Spacing between textarea and render output */
             overflow: hidden; /* Important for containing scrolling children */
+            /* Add this to give the container a base height that JS will override */
+            height: calc(100vh - 50px); /* Initial guess for content height before JS takes over */
         }
 
         #markdownInput, #renderOutput {
@@ -244,6 +247,7 @@
             .container {
                 display: block; /* Change to block for print layout */
                 padding: 0; /* Remove container padding for print */
+                height: auto !important; /* Allow content to dictate height for print */
             }
             #renderOutput {
                 display: block !important; /* Make sure it's always visible for print */
@@ -414,6 +418,7 @@
             let renderOutput;
             let toggleViewBtn;
             let toolbar;
+            let container; // Reference to the container element
             let isCodeView = true; // State to track the current view (true for code view)
 
             /**
@@ -486,8 +491,8 @@
                 } else {
                     console.warn("App.addToolbarItem: Invalid item type. Must be HTMLElement or HTML string.", elementOrHtmlString);
                 }
-                // After adding an item, re-adjust body padding if toolbar height changes
-                adjustBodyPadding();
+                // After adding an item, re-adjust layout if toolbar height changes
+                adjustLayout();
             };
 
             /**
@@ -515,12 +520,21 @@
              */
             const getIsCodeView = () => isCodeView;
 
-            // Calculate toolbar height and apply padding to body
-            const adjustBodyPadding = () => {
-                if (toolbar) {
+            /**
+             * Dynamically adjusts the height of the container and body padding
+             * to account for the fixed toolbar, especially for mobile keyboard visibility.
+             */
+            const adjustLayout = () => {
+                if (toolbar && container) {
                     const toolbarHeight = toolbar.offsetHeight;
+                    const availableHeight = window.innerHeight; // Actual visual viewport height
+
+                    // Set body padding to ensure content doesn't go under toolbar
                     document.body.style.paddingBottom = `${toolbarHeight}px`;
-                    console.log(`Adjusted body padding-bottom to ${toolbarHeight}px for toolbar.`);
+
+                    // Set container height directly based on available space
+                    container.style.height = `${availableHeight - toolbarHeight}px`;
+                    console.log(`Adjusted layout: Available Height = ${availableHeight}px, Toolbar Height = ${toolbarHeight}px, Container Height = ${availableHeight - toolbarHeight}px.`);
                 }
             };
 
@@ -534,6 +548,7 @@
                 renderOutput = document.getElementById('renderOutput');
                 toggleViewBtn = document.getElementById('toggleViewBtn');
                 toolbar = document.getElementById('toolbar');
+                container = document.querySelector('.container'); // Get reference to the container
 
                 // --- Console DOM elements and Event Listeners ---
                 window.floatingConsole = document.getElementById('floatingConsole');
@@ -589,10 +604,10 @@
                     console.warn("addonList not found or is not an array. No custom addons will be loaded.");
                 }
 
-                // Initial adjustment of body padding after all initial elements (including toolbar) are in DOM
-                adjustBodyPadding();
-                // Re-adjust on window resize (e.g., orientation change, keyboard show/hide on some devices)
-                window.addEventListener('resize', adjustBodyPadding);
+                // Initial adjustment of layout after all initial elements (including toolbar) are in DOM
+                adjustLayout();
+                // Re-adjust on window resize (e.g., orientation change, keyboard show/hide)
+                window.addEventListener('resize', adjustLayout);
 
 
                 // Set initial focus and render initial empty content
