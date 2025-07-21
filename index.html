@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Markdown/MathJax Editor</title>
     
-    <!-- Embedded Styles -->
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
@@ -224,14 +223,41 @@
                 left: 5%;
             }
         }
+
+        /* --- Print-specific Styles --- */
+        @media print {
+            #toolbar,
+            #floatingConsole,
+            #markdownInput, /* Also hide the input area when printing */
+            #toggleViewBtn,
+            #toggleConsoleBtn,
+            #insertExampleBtn, /* Hide specific buttons if you want */
+            #printBtn {
+                display: none !important;
+            }
+
+            body {
+                padding-bottom: 0 !important; /* Remove padding from toolbar space */
+            }
+
+            /* Ensure only the rendered output is visible and takes full width/height */
+            .container {
+                display: block; /* Change to block for print layout */
+                padding: 0; /* Remove container padding for print */
+            }
+            #renderOutput {
+                display: block !important; /* Make sure it's always visible for print */
+                width: auto !important;
+                height: auto !important;
+                flex-grow: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                background-color: transparent !important;
+                overflow: visible !important; /* Allow content to print beyond initial view */
+            }
+        }
     </style>
     
-    <!--
-        MathJax Configuration:
-        This script block MUST come BEFORE the MathJax-script itself.
-        It configures MathJax to recognize single '$' for inline math
-        and ensures '$$' for display math, with additional robustness.
-    -->
     <script>
         window.MathJax = {
             tex: {
@@ -252,31 +278,22 @@
         };
     </script>
 
-    <!-- MathJax for rendering mathematical equations -->
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     
-    <!-- Marked.js for parsing Markdown into HTML -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <!-- Text area for user input (Markdown/MathJax code) -->
         <textarea id="markdownInput" placeholder="Type your Markdown or MathJax here..."></textarea>
         
-        <!-- Area to display the rendered output, hidden by default -->
         <div id="renderOutput" class="hidden"></div>
     </div>
 
-    <!-- Toolbar for controls and add-on buttons -->
     <div id="toolbar">
-        <!-- Button to switch between code and render views -->
         <button id="toggleViewBtn">Show Rendered</button>
-        <!-- Button to toggle the floating console -->
         <button id="toggleConsoleBtn">Show Console</button>
-        <!-- Addon buttons will be dynamically injected here by the JavaScript -->
-    </div>
+        </div>
 
-    <!-- Floating Console Panel -->
     <div id="floatingConsole" class="hidden">
         <div class="console-header">
             <span>Console</span>
@@ -285,7 +302,6 @@
         <div id="consoleOutput" class="console-output"></div>
     </div>
 
-    <!-- Embedded Application Logic -->
     <script>
         // Configure Marked.js with an extension to properly handle MathJax display blocks.
         // This ensures that $$...$$ content is wrapped in a div, which MathJax prefers for display equations,
@@ -605,7 +621,7 @@
         // Add-on list
         const addonList = [
             "exampleAddon.js",
-            "printAddon.js" // NEW: Include the print addon
+            "printAddon.js"
         ];
 
         // Ensure the application initializes after all necessary scripts and DOM are loaded.
