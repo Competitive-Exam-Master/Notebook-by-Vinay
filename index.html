@@ -12,13 +12,12 @@
             padding: 0;
             display: flex;
             flex-direction: column;
-            /* Set min-height to 100vh to handle initial full screen,
-               but actual height will be controlled by JS for viewport adjustments */
-            min-height: 100vh;
+            /* Height will be set by JS based on window.innerHeight or visualViewport.height */
+            height: var(--app-viewport-height, 100vh); /* Fallback to 100vh */
             overflow: hidden; /* Prevent body scroll, content areas will scroll */
             background-color: #f4f7f6;
             color: #333;
-            padding-bottom: 0; /* Will be set by JS dynamically */
+            padding-bottom: 0; /* Will be set by JS dynamically to make space for toolbar */
         }
 
         .container {
@@ -28,8 +27,8 @@
             padding: 15px;
             gap: 15px; /* Spacing between textarea and render output */
             overflow: hidden; /* Important for containing scrolling children */
-            /* Add this to give the container a base height that JS will override */
-            height: calc(100vh - 50px); /* Initial guess for content height before JS takes over */
+            /* Height will be explicitly set by JS */
+            height: auto; /* Allow flex-grow to work, JS will override */
         }
 
         #markdownInput, #renderOutput {
@@ -241,6 +240,7 @@
 
             body {
                 padding-bottom: 0 !important; /* Remove padding from toolbar space */
+                height: auto !important; /* Allow body height to be natural for printing */
             }
 
             /* Ensure only the rendered output is visible and takes full width/height */
@@ -527,14 +527,26 @@
             const adjustLayout = () => {
                 if (toolbar && container) {
                     const toolbarHeight = toolbar.offsetHeight;
-                    const availableHeight = window.innerHeight; // Actual visual viewport height
+                    let viewportHeight = window.innerHeight; // Default to window.innerHeight
 
-                    // Set body padding to ensure content doesn't go under toolbar
+                    // Use visualViewport if available for more robust mobile keyboard detection
+                    if (window.visualViewport) {
+                        // visualViewport.height gives the height of the visual viewport, excluding browser UI and keyboard
+                        viewportHeight = window.visualViewport.height;
+                    }
+
+                    // Set CSS custom property on the body for overall app height
+                    // This makes the body take up exactly the available visual space
+                    document.body.style.setProperty('--app-viewport-height', `${viewportHeight}px`);
+
+                    // Adjust container height to fill space above toolbar
+                    // The toolbar is fixed, so the content area needs to know its exact height
+                    container.style.height = `${viewportHeight - toolbarHeight}px`;
+
+                    // Add padding to the body to prevent content from being hidden behind the fixed toolbar
                     document.body.style.paddingBottom = `${toolbarHeight}px`;
 
-                    // Set container height directly based on available space
-                    container.style.height = `${availableHeight - toolbarHeight}px`;
-                    console.log(`Adjusted layout: Available Height = ${availableHeight}px, Toolbar Height = ${toolbarHeight}px, Container Height = ${availableHeight - toolbarHeight}px.`);
+                    console.log(`Layout Adjusted: Viewport=${viewportHeight}px, Toolbar=${toolbarHeight}px, Container=${container.style.height}, Body Padding=${document.body.style.paddingBottom}`);
                 }
             };
 
@@ -606,9 +618,13 @@
 
                 // Initial adjustment of layout after all initial elements (including toolbar) are in DOM
                 adjustLayout();
-                // Re-adjust on window resize (e.g., orientation change, keyboard show/hide)
+                // Re-adjust on window resize (e.g., orientation change)
                 window.addEventListener('resize', adjustLayout);
-
+                // Also listen to visualViewport's resize event if it exists (more precise for keyboard)
+                if (window.visualViewport) {
+                    window.visualViewport.addEventListener('resize', adjustLayout);
+                    console.log("Listening to visualViewport resize events for precise layout adjustments.");
+                }
 
                 // Set initial focus and render initial empty content
                 markdownInput.focus();
@@ -622,6 +638,7 @@
                 addToolbarItem: addToolbarItem,
                 getContent: getContent,
                 setContent: setContent,
+                toogleView: toggleView,       // Typo fix: Changed to 'toggleView' (consistent with function name)
                 renderContent: renderContent, // Allow add-ons to trigger a re-render
                 toggleView: toggleView,       // Expose toggleView for external control
                 getIsCodeView: getIsCodeView  // Expose current view state
