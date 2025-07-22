@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Markdown/MathJax Editor</title>
-    
+
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
@@ -115,7 +115,7 @@
 
         #toolbar button {
             /* Prevent buttons from shrinking too much */
-            flex-shrink: 0; 
+            flex-shrink: 0;
             padding: 10px 18px;
             border: none;
             background-color: #007bff;
@@ -261,42 +261,39 @@
             }
         }
     </style>
-    
+
     <script>
         window.MathJax = {
             tex: {
-                // Keep inlineMath configured here, as it works well.
                 inlineMath: [['$', '$'], ['\\(', '\\)']],
-                // Keep displayMath configured here. The Marked.js extension will help
-                // ensure the HTML structure is clean for MathJax to pick these up.
                 displayMath: [['$$', '$$'], ['\\[', '\\]']],
-                processEscapes: true,         // Allow for escaped characters like \$
-                processEnvironments: true,    // Allow for TeX environments like \begin{align}
-                // Load common TeX packages like amsmath and newcommand for richer TeX support
+                processEscapes: true,
+                processEnvironments: true,
                 packages: {'[+]': ['ams', 'newcommand']}
             },
             options: {
-                // Ensure MathJax skips processing inside these tags, which commonly hold code or raw input
                 skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'annotation', 'annotation-xml']
             }
         };
     </script>
 
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script src="addons/addons.js" defer></script>
+
 </head>
 <body>
     <div class="container">
         <textarea id="markdownInput" placeholder="Type your Markdown or MathJax here..."></textarea>
-        
+
         <div id="renderOutput" class="hidden"></div>
     </div>
 
     <div id="toolbar">
         <button id="toggleViewBtn">Show Rendered</button>
         <button id="toggleConsoleBtn">Show Console</button>
-        </div>
+    </div>
 
     <div id="floatingConsole" class="hidden">
         <div class="console-header">
@@ -308,103 +305,84 @@
 
     <script>
         // Configure Marked.js with an extension to properly handle MathJax display blocks.
-        // This ensures that $$...$$ content is wrapped in a div, which MathJax prefers for display equations,
-        // rather than being potentially messed up by Markdown's paragraph processing.
         marked.use({
             extensions: [{
-                name: 'mathBlock', // Custom extension name for block math
-                level: 'block', // This is a block-level element (like paragraphs, lists, etc.)
+                name: 'mathBlock',
+                level: 'block',
                 start(src) {
-                    // This function helps marked.js quickly find potential matches.
-                    // It looks for '$$' at the beginning of a line, optionally preceded by up to 3 spaces.
                     return src.match(/^ {0,3}\$\$/m);
                 },
                 tokenizer(src, tokens) {
-                    // The regular expression to actually parse and capture the MathJax block.
-                    // It looks for '$$', captures everything until the next '$$', and ensures it's a block.
                     const rule = /^ {0,3}\$\$([\\s\\S]*?)\$\$ *(?:\n|$)/;
                     const match = rule.exec(src);
                     if (match) {
-                        const formula = match[1].trim(); // Extract the formula content, trimming whitespace
+                        const formula = match[1].trim();
                         return {
-                            type: 'mathBlock', // The type of token created by this extension
-                            raw: match[0],     // The raw matched string from the input
-                            formula: formula,  // The actual mathematical formula
-                            tokens: []         // Math blocks should not contain nested Markdown tokens
+                            type: 'mathBlock',
+                            raw: match[0],
+                            formula: formula,
+                            tokens: []
                         };
                     }
                 },
                 renderer(token) {
-                    // How to render this 'mathBlock' token into HTML.
-                    // We wrap it in a div with a specific class for clarity, and re-add the $$ delimiters
-                    // within the div so MathJax knows it's a display equation.
                     return `<div class="mathjax-display">$$\n${token.formula}\n$$</div>\n`;
                 }
             }]
         });
 
         // --- Floating Console Logic ---
-        // Store original console methods
         const originalConsoleLog = console.log;
         const originalConsoleWarn = console.warn;
         const originalConsoleError = console.error;
 
-        // A temporary array to store messages logged before the custom console is initialized in DOM
         const pendingConsoleMessages = [];
 
-        // This function will be called by our wrapped console methods to append to the custom console
         function appendToCustomConsole(type, args) {
             const message = Array.from(args).map(arg => {
                 if (typeof arg === 'object' && arg !== null) {
                     try {
-                        // Handle potential circular references with a replacer for JSON.stringify
-                        const cache = new Set(); // Using a Set to detect circular refs
+                        const cache = new Set();
                         return JSON.stringify(arg, (key, value) => {
                             if (typeof value === 'object' && value !== null) {
                                 if (cache.has(value)) {
-                                    // Circular reference found, discard key
-                                    return; // Return undefined to omit the value from the stringified output
+                                    return;
                                 }
-                                // Store value in our collection
                                 cache.add(value);
                             }
                             return value;
-                        }, 2); // Pretty print with 2 spaces indentation
+                        }, 2);
                     } catch (e) {
-                        return String(arg); // Fallback for very complex objects or errors during stringify
+                        return String(arg);
                     }
                 }
                 return String(arg);
-            }).join(' '); // Join all arguments with a space
+            }).join(' ');
 
-            // If the consoleOutput element is ready, append the message
-            if (window.consoleOutput) { 
+            if (window.consoleOutput) {
                 const line = document.createElement('div');
                 line.classList.add('console-line', `console-${type}`);
                 line.textContent = message;
                 window.consoleOutput.appendChild(line);
-                // Auto-scroll to the bottom to show the latest message
                 window.consoleOutput.scrollTop = window.consoleOutput.scrollHeight;
             } else {
-                // If consoleOutput is not yet in DOM, queue the message to be processed later
                 pendingConsoleMessages.push({ type, message });
             }
         }
 
-        // Override console methods to also write to our custom console
         console.log = function(...args) {
             appendToCustomConsole('info', args);
-            originalConsoleLog.apply(console, args); // Also call the original console.log
+            originalConsoleLog.apply(console, args);
         };
 
         console.warn = function(...args) {
             appendToCustomConsole('warn', args);
-            originalConsoleWarn.apply(console, args); // Also call the original console.warn
+            originalConsoleWarn.apply(console, args);
         };
 
         console.error = function(...args) {
             appendToCustomConsole('error', args);
-            originalConsoleError.apply(console, args); // Also call the original console.error
+            originalConsoleError.apply(console, args);
         };
         // --- End Floating Console Logic ---
 
@@ -418,53 +396,39 @@
             let renderOutput;
             let toggleViewBtn;
             let toolbar;
-            let container; // Reference to the container element
-            let isCodeView = true; // State to track the current view (true for code view)
+            let container;
+            let isCodeView = true;
 
-            /**
-             * Renders the content from the markdownInput textarea into the renderOutput div.
-             * Parses Markdown and then triggers MathJax typesetting.
-             */
             const renderContent = () => {
                 const markdownText = markdownInput.value;
-                // Convert Markdown to HTML using Marked.js (which now uses our custom extension)
                 const html = marked.parse(markdownText);
                 renderOutput.innerHTML = html;
-                console.log("Marked.js Output HTML:\n" + html); // Log Marked.js output HTML to console
-                console.log("Rendered HTML updated."); // Log to console
+                console.log("Marked.js Output HTML:\n" + html);
+                console.log("Rendered HTML updated.");
 
-                // Trigger MathJax typesetting for the newly rendered content.
-                // This is crucial for MathJax to process mathematical expressions.
                 if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
                     MathJax.typesetPromise([renderOutput])
-                        .catch(err => console.error("MathJax typesetting error:", err)); // Log MathJax errors
+                        .catch(err => console.error("MathJax typesetting error:", err));
                 }
             };
 
-            /**
-             * Toggles between the code input view (textarea) and the rendered output view.
-             * @param {string} [forceView] - Optional. 'code' to force code view, 'render' to force render view.
-             */
             const toggleView = (forceView) => {
                 const newIsCodeView = forceView === 'code' ? true : (forceView === 'render' ? false : !isCodeView);
-                
+
                 if (isCodeView === newIsCodeView) {
-                    // No change in view state, do nothing
                     return;
                 }
 
-                isCodeView = newIsCodeView; // Update the view state
+                isCodeView = newIsCodeView;
 
                 if (isCodeView) {
-                    // Switch to Code View
                     markdownInput.classList.remove('hidden');
                     renderOutput.classList.add('hidden');
                     toggleViewBtn.textContent = 'Show Rendered';
-                    markdownInput.focus(); // Keep focus on the textarea
+                    markdownInput.focus();
                     console.log("Switched to Code View.");
                 } else {
-                    // Switch to Rendered View
-                    renderContent(); // Render content before showing it
+                    renderContent();
                     markdownInput.classList.add('hidden');
                     renderOutput.classList.remove('hidden');
                     toggleViewBtn.textContent = 'Show Code';
@@ -472,112 +436,70 @@
                 }
             };
 
-            /**
-             * Adds an HTML element or a string of HTML to the toolbar.
-             * This method is part of the public API for add-ons to extend the toolbar.
-             * @param {HTMLElement|string} elementOrHtmlString - The HTML element or string to add.
-             */
             const addToolbarItem = (elementOrHtmlString) => {
                 if (typeof elementOrHtmlString === 'string') {
-                    // If it's an HTML string, create a temporary div to parse it
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = elementOrHtmlString;
                     while (tempDiv.firstChild) {
                         toolbar.appendChild(tempDiv.firstChild);
                     }
                 } else if (elementOrHtmlString instanceof HTMLElement) {
-                    // If it's already an HTMLElement, just append it
                     toolbar.appendChild(elementOrHtmlString);
                 } else {
                     console.warn("App.addToolbarItem: Invalid item type. Must be HTMLElement or HTML string.", elementOrHtmlString);
                 }
-                // After adding an item, re-adjust layout if toolbar height changes
                 adjustLayout();
             };
 
-            /**
-             * Returns the current content of the markdownInput textarea.
-             * @returns {string} The current text content.
-             */
             const getContent = () => markdownInput.value;
 
-            /**
-             * Sets the content of the markdownInput textarea and triggers a re-render
-             * if the application is currently in render view.
-             * @param {string} newContent - The new text content to set.
-             */
             const setContent = (newContent) => {
                 markdownInput.value = newContent;
                 if (!isCodeView) {
-                    renderContent(); // Re-render if in preview mode
+                    renderContent();
                 }
                 console.log("Content updated.");
             };
 
-            /**
-             * Returns the current view state (true if in code view, false if in render view).
-             * @returns {boolean}
-             */
             const getIsCodeView = () => isCodeView;
 
-            /**
-             * Dynamically adjusts the height of the container and body padding
-             * to account for the fixed toolbar, especially for mobile keyboard visibility.
-             */
             const adjustLayout = () => {
                 if (toolbar && container) {
                     const toolbarHeight = toolbar.offsetHeight;
-                    let viewportHeight = window.innerHeight; // Default to window.innerHeight
+                    let viewportHeight = window.innerHeight;
 
-                    // Use visualViewport if available for more robust mobile keyboard detection
                     if (window.visualViewport) {
-                        // visualViewport.height gives the height of the visual viewport, excluding browser UI and keyboard
                         viewportHeight = window.visualViewport.height;
                     }
 
-                    // Set CSS custom property on the body for overall app height
-                    // This makes the body take up exactly the available visual space
                     document.body.style.setProperty('--app-viewport-height', `${viewportHeight}px`);
-
-                    // Adjust container height to fill space above toolbar
-                    // The toolbar is fixed, so the content area needs to know its exact height
                     container.style.height = `${viewportHeight - toolbarHeight}px`;
-
-                    // Add padding to the body to prevent content from being hidden behind the fixed toolbar
                     document.body.style.paddingBottom = `${toolbarHeight}px`;
 
                     console.log(`Layout Adjusted: Viewport=${viewportHeight}px, Toolbar=${toolbarHeight}px, Container=${container.style.height}, Body Padding=${document.body.style.paddingBottom}`);
                 }
             };
 
-            /**
-             * Initializes the application by getting DOM references, setting up event listeners,
-             * and loading add-ons. This function is called once the DOM is ready.
-             */
             const initApp = () => {
-                // Get DOM elements
                 markdownInput = document.getElementById('markdownInput');
                 renderOutput = document.getElementById('renderOutput');
                 toggleViewBtn = document.getElementById('toggleViewBtn');
                 toolbar = document.getElementById('toolbar');
-                container = document.querySelector('.container'); // Get reference to the container
+                container = document.querySelector('.container');
 
-                // --- Console DOM elements and Event Listeners ---
                 window.floatingConsole = document.getElementById('floatingConsole');
                 window.toggleConsoleBtn = document.getElementById('toggleConsoleBtn');
                 window.closeConsoleBtn = document.getElementById('closeConsoleBtn');
-                window.consoleOutput = document.getElementById('consoleOutput'); // Assign to window for global access
+                window.consoleOutput = document.getElementById('consoleOutput');
 
-                // Process any pending messages that were logged before initApp (DOMContentLoaded)
                 pendingConsoleMessages.forEach(msg => {
                     const line = document.createElement('div');
                     line.classList.add('console-line', `console-${msg.type}`);
                     line.textContent = msg.message;
                     window.consoleOutput.appendChild(line);
                 });
-                pendingConsoleMessages.length = 0; // Clear the queue after processing
+                pendingConsoleMessages.length = 0;
 
-                // Add event listeners for console toggle
                 if (window.toggleConsoleBtn) {
                     window.toggleConsoleBtn.addEventListener('click', () => {
                         window.floatingConsole.classList.toggle('hidden');
@@ -590,73 +512,58 @@
                         console.log("Console closed.");
                     });
                 }
-                // --- End Console Init ---
 
-                // Attach event listeners for main app functionality
-                toggleViewBtn.addEventListener('click', () => toggleView()); // Call without forcing view
+                toggleViewBtn.addEventListener('click', () => toggleView());
 
-                // Optional: Live preview update when typing in code view, if in render mode
                 markdownInput.addEventListener('input', () => {
                     if (!isCodeView) {
                         renderContent();
                     }
                 });
 
-                // Load add-ons dynamically from the 'addons' folder
+                // IMPORTANT: addonList is now expected to be loaded globally from addons/addons.js
+                // No need to define it here anymore.
                 if (typeof addonList !== 'undefined' && Array.isArray(addonList)) {
                     addonList.forEach(addonFileName => {
                         const script = document.createElement('script');
-                        script.src = `addons/${addonFileName}`; // Path to the add-on script
-                        script.defer = true; // Defer script execution to not block parsing
+                        script.src = `addons/${addonFileName}`;
+                        script.defer = true;
                         script.onerror = () => console.error(`Failed to load addon: ${addonFileName}`);
                         document.body.appendChild(script);
                         console.log(`Attempting to load addon: ${addonFileName}`);
                     });
                 } else {
-                    console.warn("addonList not found or is not an array. No custom addons will be loaded.");
+                    console.warn("addonList not found or is not an array. No custom addons will be loaded. Ensure addons/addons.js is loaded correctly.");
                 }
 
-                // Initial adjustment of layout after all initial elements (including toolbar) are in DOM
                 adjustLayout();
-                // Re-adjust on window resize (e.g., orientation change)
                 window.addEventListener('resize', adjustLayout);
-                // Also listen to visualViewport's resize event if it exists (more precise for keyboard)
                 if (window.visualViewport) {
                     window.visualViewport.addEventListener('resize', adjustLayout);
                     console.log("Listening to visualViewport resize events for precise layout adjustments.");
                 }
 
-                // Set initial focus and render initial empty content
                 markdownInput.focus();
-                renderContent(); // Render once on load to ensure MathJax is initialized, even if hidden
+                renderContent();
                 console.log("Application initialized successfully!");
             };
 
-            // Expose public methods/API for external access (e.g., from index.html and add-ons)
             return {
                 initApp: initApp,
                 addToolbarItem: addToolbarItem,
                 getContent: getContent,
                 setContent: setContent,
-                toogleView: toggleView,       // Typo fix: Changed to 'toggleView' (consistent with function name)
-                renderContent: renderContent, // Allow add-ons to trigger a re-render
-                toggleView: toggleView,       // Expose toggleView for external control
-                getIsCodeView: getIsCodeView  // Expose current view state
+                toggleView: toggleView,
+                renderContent: renderContent,
+                getIsCodeView: getIsCodeView
             };
         })();
 
-        // Assign initApp to the global window object so it can be called from index.html
         window.initApp = App.initApp;
-        // Also, expose the entire App object globally for add-ons to use its API
         window.App = App;
 
-        // Add-on list
-        const addonList = [
-            "exampleAddon.js",
-            "printAddon.js"
-        ];
+        // The old `addonList` definition has been removed from here.
 
-        // Ensure the application initializes after all necessary scripts and DOM are loaded.
         document.addEventListener('DOMContentLoaded', () => {
             if (typeof initApp === 'function') {
                 initApp();
