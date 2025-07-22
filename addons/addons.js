@@ -3,6 +3,6 @@
 // Each file listed here will be dynamically loaded by app.js.
 const addonList = [
     "exampleAddon.js",      // An example add-on that inserts predefined content
-    "printAddon.js"         // NEW: Add the print add-on
+    "printAddon.js",        // NEW: Add the print add-on
     "alignTextAddon.js"
 ];
