@@ -2,5 +2,5 @@
 const addonList = [
     "exampleAddon.js",
     "printAddon.js",
-    "alignTextAddon.js" // Add this line
+    "alignAddon.js" // Add this line
 ];
