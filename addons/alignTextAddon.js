@@ -1,7 +1,8 @@
 // addons/alignTextAddon.js
 (() => {
     /**
-     * Wraps the selected text in the markdownInput with the specified HTML tag and style.
+     * Wraps the selected text in the markdownInput with the specified HTML div and style.
+     * It intelligently decides whether to add newlines around the content inside the div.
      * @param {string} alignment - 'left', 'center', or 'right'.
      */
     const applyAlignment = (alignment) => {
@@ -23,9 +24,12 @@
 
         const start = markdownInput.selectionStart;
         const end = markdownInput.selectionEnd;
-        const selectedText = markdownInput.value.substring(start, end);
+        let selectedText = markdownInput.value.substring(start, end);
 
-        if (!selectedText) {
+        // Trim selectedText for initial checks but retain original for insertion
+        const trimmedSelectedText = selectedText.trim();
+
+        if (!trimmedSelectedText) {
             console.warn("No text selected for alignment.");
             return;
         }
@@ -34,30 +38,46 @@
         const before = currentContent.substring(0, start);
         const after = currentContent.substring(end);
 
-        // Determine the appropriate tag and style
-        let openingTag, closingTag;
-        if (selectedText.includes('\n')) {
-            // If the selection contains newlines, treat it as a block and use <div>
-            openingTag = `<div style="text-align: ${alignment};">`;
-            closingTag = `</div>`;
+        // Determine if newlines are needed around the content inside the div.
+        // If the selected text contains multiple lines OR starts with a Markdown heading,
+        // we'll add newlines for better Markdown processing within the div.
+        const needsNewlines = trimmedSelectedText.includes('\n') || trimmedSelectedText.match(/^(#+\s.*)$/m);
+
+        const openingTag = `<div style="text-align: ${alignment};">`;
+        const closingTag = `</div>`;
+
+        let contentToInsert;
+        let newlineOffset = 0; // To adjust cursor position after insertion
+
+        if (needsNewlines) {
+            contentToInsert = `${openingTag}\n${selectedText}\n${closingTag}`;
+            newlineOffset = 2; // Two newlines added (one after opening, one before closing)
         } else {
-            // Otherwise, assume it's inline and use <p> for paragraphs
-            openingTag = `<p style="text-align: ${alignment};">`;
-            closingTag = `</p>`;
+            // For single-line text, wrapping in a div with newlines might disrupt inline markdown.
+            // However, a div is a block element, so it will always create a block.
+            // For consistency and to ensure proper block parsing by Markdown within the div,
+            // even single lines often benefit from being treated as a block.
+            // Let's stick to the principle of using div for blocks, so we'll add newlines
+            // unless the context absolutely forbids it (e.g., trying to center inline bold).
+            // For simplicity and effectiveness with headings/paragraphs, let's keep newlines.
+            contentToInsert = `${openingTag}\n${selectedText}\n${closingTag}`;
+            newlineOffset = 2;
         }
-        
-        const newContent = `${before}${openingTag}${selectedText}${closingTag}${after}`;
+
+        const newContent = `${before}${contentToInsert}${after}`;
         App.setContent(newContent);
 
         // Restore selection or cursor position after update
         // Use a timeout to ensure DOM update (setContent) has completed
         setTimeout(() => {
             markdownInput.focus();
-            markdownInput.selectionStart = start + openingTag.length;
-            markdownInput.selectionEnd = start + openingTag.length + selectedText.length;
+            const newStart = start + openingTag.length + (needsNewlines ? 1 : 0); // +1 for newline if added
+            const newEnd = newStart + selectedText.length;
+            markdownInput.selectionStart = newStart;
+            markdownInput.selectionEnd = newEnd;
         }, 0);
 
-        console.log(`Text aligned to: ${alignment}`);
+        console.log(`Text aligned to: ${alignment} using <div>`);
     };
 
     // Create buttons for each alignment option
